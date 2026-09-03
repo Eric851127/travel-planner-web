@@ -1,17 +1,23 @@
-# Travel Planner — P3
+# Travel Planner
+
+目前版本：P5
 
 包含：
 - Mobile-first HTML/CSS/Vanilla JS
-- Live Apps Script API
+- Apps Script read-only API
 - Today / Trip / Bookings / Map / More
 - All / Ours / Friends filter
-- Read-only V1
+- Public-field whitelist
+- JSONP mobile-compatible API access
 
-API:
-https://script.google.com/macros/s/AKfycbwAKt2KkcLKAQye2icfGYaCTEhranJTi-dS8Kr4zad9sK_vmh-tBaG91wgQbDmF82hR/exec
+## Security
 
-本地測試：
+公開前端只讀取 Apps Script API 的公開欄位白名單。API endpoint 不在 README 或使用者介面直接展示；但前端網路請求本質上仍可被瀏覽器檢視，因此安全性以後端權限與欄位白名單為準，不依賴隱藏 URL。
+
+不公開訂房確認碼、航班 booking reference、reservation booking URL 等私人欄位。正式公開前應同步移除 notes 與可能含私人票券連結的 Transport.url。
+
+## Local test
+
+```bash
 python3 -m http.server 8080
-
-目前 Today 預設日期為 2026-12-24，因為現有 sample data 在這一天。
-下一步可做：日期選擇、reservation join、flight/hotel summary、Places map links、public field whitelist。
+```
