@@ -57,10 +57,23 @@ renderMore = function() {
       <div class="meta">旅客唯讀版 · API v1 · ${esc(version)}</div>
     </div>
     <div class="card">
+      <h3>資料來源</h3>
+      <div class="meta">已在此裝置設定。完整 API URL 不顯示於頁面，也不預先寫入 GitHub。</div>
+      <button id="changeDataSourceBtn" class="retry-button" type="button" style="margin-top:12px">更換資料來源</button>
+    </div>
+    <div class="card">
       <h3>P5 狀態</h3>
-      <div class="meta">真實行程資料導入中 · 手機 API 相容模式已啟用 · 公開欄位安全收斂中</div>
+      <div class="meta">真實行程資料導入中 · 私有資料來源模式已啟用</div>
     </div>
   </div>`;
+
+  const changeButton = document.getElementById('changeDataSourceBtn');
+  if (changeButton) changeButton.onclick = () => {
+    const storageKey = config.storageKey || 'travelPlanner.apiBase.v1';
+    localStorage.removeItem(storageKey);
+    state.cache.clear();
+    location.reload();
+  };
 };
 
 renderCurrent = async function(force = false) {
