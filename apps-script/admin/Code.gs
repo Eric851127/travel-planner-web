@@ -12,13 +12,40 @@ function doGet() {
   return HtmlService.createHtmlOutputFromFile('Admin').setTitle('Travel Planner Admin').setXFrameOptionsMode(HtmlService.XFrameOptionsMode.DEFAULT);
 }
 
+function getAdminIdentity_() {
+  const email = String(Session.getActiveUser().getEmail() || '').trim().toLowerCase();
+  if (!email) throw new Error('無法取得目前登入的 Google 帳戶。請確認 Admin Web App 設為「以存取 Web App 的使用者身分執行」，並重新授權。');
+  return email;
+}
+
+function isTruthyAdminValue_(value) {
+  const v = String(value == null ? '' : value).trim().toLowerCase();
+  return value === true || v === 'true' || v === '1' || v === 'yes';
+}
+
+function getAuthorizedAdmin_() {
+  const email = getAdminIdentity_();
+  const ss = SpreadsheetApp.openById(ADMIN_CONFIG.SPREADSHEET_ID);
+  const members = readSheetObjects_(requiredSheet_(ss, ADMIN_CONFIG.SHEETS.members));
+  const member = members.find(row => String(row.email || '').trim().toLowerCase() === email);
+
+  if (!member) throw new Error('此 Google 帳戶尚未加入 Admin 授權名單：' + email);
+  if (!isTruthyAdminValue_(member.active)) throw new Error('此成員目前已停用，無法使用 Admin。');
+  if (!isTruthyAdminValue_(member.admin_access)) throw new Error('此帳戶沒有 Admin 管理權限。');
+
+  return { id:member.id || '', name:member.name || email, email, group:member.group || '', role:member.role || '' };
+}
+
+function assertAdminAuthorized_() { return getAuthorizedAdmin_(); }
+
 function getAdminBootstrap() {
+  const currentAdmin = assertAdminAuthorized_();
   const ss = SpreadsheetApp.openById(ADMIN_CONFIG.SPREADSHEET_ID), s = ADMIN_CONFIG.SHEETS;
   return {
     itinerary: readSheetObjects_(requiredSheet_(ss,s.itinerary)), reservations: readSheetObjects_(requiredSheet_(ss,s.reservations)),
     hotels: readSheetObjects_(requiredSheet_(ss,s.hotels)), flights: readSheetObjects_(requiredSheet_(ss,s.flights)),
     transport: readSheetObjects_(requiredSheet_(ss,s.transport)), places: readSheetObjects_(requiredSheet_(ss,s.places)),
-    members: readSheetObjects_(requiredSheet_(ss,s.members)),
+    members: readSheetObjects_(requiredSheet_(ss,s.members)), current_admin: currentAdmin,
     enums: { group:ADMIN_CONFIG.GROUPS, certainty:ADMIN_CONFIG.CERTAINTIES, reservation_category:ADMIN_CONFIG.RESERVATION_CATEGORIES, reservation_status:ADMIN_CONFIG.RESERVATION_STATUSES, transport_type:ADMIN_CONFIG.TRANSPORT_TYPES }
   };
 }
@@ -36,6 +63,7 @@ function deleteTransport(id){ return deleteEntity_('transport', id, /^T\d{3,}$/,
 function deleteReservation(id){ return deleteEntity_('reservations', id, /^R\d{3,}$/, function(ss, cleanId){ assertNotReferenced_(ss, cleanId, [{sheet:'itinerary',field:'reservation_id',label:'Itinerary'},{sheet:'hotels',field:'reservation_id',label:'Hotels'},{sheet:'flights',field:'reservation_id',label:'Flights'},{sheet:'transport',field:'reservation_id',label:'Transport'}]); }); }
 
 function saveEntity_(sheetKey, input, prefix, validator) {
+  assertAdminAuthorized_();
   return withWriteLock_(function(){
     const ss=SpreadsheetApp.openById(ADMIN_CONFIG.SPREADSHEET_ID), sheet=requiredSheet_(ss,ADMIN_CONFIG.SHEETS[sheetKey]), table=readTable_(sheet);
     const clean=validator(input||{},table.objects,ss), existingIndex=clean.id?table.objects.findIndex(r=>r.id===clean.id):-1;
@@ -47,6 +75,7 @@ function saveEntity_(sheetKey, input, prefix, validator) {
 }
 
 function deleteEntity_(sheetKey,id,pattern,preDelete){
+  assertAdminAuthorized_();
   const cleanId=String(id||'').trim(); if(!pattern.test(cleanId)) throw new Error('ID 格式無效');
   return withWriteLock_(function(){ const ss=SpreadsheetApp.openById(ADMIN_CONFIG.SPREADSHEET_ID); preDelete(ss,cleanId); deleteById_(requiredSheet_(ss,ADMIN_CONFIG.SHEETS[sheetKey]),cleanId); return {success:true,action:'deleted',id:cleanId}; });
 }
