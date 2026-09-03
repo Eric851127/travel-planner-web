@@ -1,12 +1,28 @@
-/* P4 production acceptance fixes */
+/* P4/P5 production acceptance fixes */
 
-const p4BaseApi = api;
 api = async function(resource, params = {}, force = false) {
+  const url = new URL(config.apiBase);
+  url.searchParams.set('resource', resource);
+
   const scopedParams = Object.assign({}, params);
   if (scopedParams.group && scopedParams.group !== 'all' && !String(scopedParams.group).includes(',')) {
     scopedParams.group = String(scopedParams.group) + ',all';
   }
-  return p4BaseApi(resource, scopedParams, force);
+
+  Object.entries(scopedParams).forEach(([key, value]) => {
+    if (value !== null && value !== undefined && value !== '') {
+      url.searchParams.set(key, value);
+    }
+  });
+
+  url.searchParams.set('_ts', Date.now().toString());
+  const cacheKey = resource + '?' + new URLSearchParams(scopedParams).toString();
+  if (!force && state.cache.has(cacheKey)) return state.cache.get(cacheKey);
+
+  const json = await jsonp(url, 18000);
+  if (!json || !json.success) throw new Error(json?.error?.message || 'API 發生錯誤');
+  state.cache.set(cacheKey, json.data);
+  return json.data;
 };
 
 renderBookings = async function(force = false) {
@@ -34,7 +50,7 @@ renderBookings = async function(force = false) {
 
 renderMore = function() {
   pageTitle.textContent = '更多';
-  const version = config.buildVersion || 'P4';
+  const version = config.buildVersion || 'P5';
   app.innerHTML = `<div class="stack">
     <div class="card">
       <h2>旅遊行程規劃</h2>
@@ -45,8 +61,8 @@ renderMore = function() {
       <div class="meta" style="word-break:break-all">${esc(config.apiBase)}</div>
     </div>
     <div class="card">
-      <h3>P4 上線狀態</h3>
-      <div class="meta">公開欄位白名單已啟用 · JSONP 已啟用 · 群組共同活動已納入 · 預訂狀態已驗收</div>
+      <h3>P5 狀態</h3>
+      <div class="meta">真實行程資料導入中 · 手機 API 相容模式已啟用</div>
     </div>
   </div>`;
 };
