@@ -1,0 +1,98 @@
+<!doctype html>
+<html lang="zh-Hant">
+<head>
+  <base target="_top">
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+  <title>Travel Planner Admin</title>
+  <style>
+    *{box-sizing:border-box}body{margin:0;background:#f5f5f5;color:#202124;font-family:system-ui,-apple-system,"Noto Sans TC",sans-serif}.shell{max-width:760px;margin:auto;padding:16px 16px 48px}.top{display:flex;align-items:center;justify-content:space-between;gap:12px;margin-bottom:16px}.top h1{font-size:22px;margin:0}.btn{border:0;border-radius:10px;padding:11px 14px;font-size:15px;font-weight:700;cursor:pointer}.primary{background:#202124;color:white}.secondary{background:white;border:1px solid #dadce0}.danger{background:#fff1f0;color:#b3261e;border:1px solid #f2b8b5}.card{background:white;border:1px solid #e3e3e3;border-radius:14px;padding:14px;margin-bottom:12px}.toolbar{display:flex;gap:8px;flex-wrap:wrap;margin-bottom:12px}.toolbar select,.toolbar input,.field input,.field select,.field textarea{width:100%;padding:11px;border:1px solid #c9c9c9;border-radius:9px;font:inherit;background:white}.toolbar select{width:auto;min-width:170px}.item{display:flex;justify-content:space-between;gap:12px;align-items:flex-start}.item h3{margin:0 0 4px;font-size:16px}.meta{font-size:13px;color:#666}.actions{display:flex;gap:6px}.actions .btn{padding:8px 10px;font-size:13px}.empty,.status{color:#666;text-align:center;padding:20px}.overlay{position:fixed;inset:0;background:rgba(0,0,0,.35);display:none;align-items:flex-end;justify-content:center}.overlay.open{display:flex}.sheet{background:white;width:100%;max-width:760px;max-height:94vh;overflow:auto;border-radius:18px 18px 0 0;padding:18px}.sheet h2{margin:0 0 16px}.grid{display:grid;grid-template-columns:1fr 1fr;gap:12px}.field{margin-bottom:12px}.field.full{grid-column:1/-1}.field label{display:block;font-size:13px;font-weight:700;margin-bottom:6px}.sheet-actions{display:flex;gap:8px;position:sticky;bottom:0;background:white;padding-top:10px}.sheet-actions .btn{flex:1}.toast{position:fixed;left:50%;bottom:20px;transform:translateX(-50%);background:#202124;color:white;padding:10px 14px;border-radius:10px;display:none;z-index:10}.toast.show{display:block}@media(max-width:560px){.grid{grid-template-columns:1fr}.field.full{grid-column:auto}.item{flex-direction:column}.actions{width:100%}.actions .btn{flex:1}}
+  </style>
+</head>
+<body>
+<div class="shell">
+  <div class="top"><div><div class="meta">Planner 管理端</div><h1>行程管理</h1></div><button class="btn primary" id="addBtn">＋ 新增</button></div>
+  <div class="toolbar"><select id="dateFilter"></select><select id="groupFilter"><option value="all">全部群組</option><option value="ours">我們</option><option value="friends">朋友</option><option value="common">共同</option></select><button class="btn secondary" id="reloadBtn">重新整理</button></div>
+  <div id="list"><div class="status">載入中…</div></div>
+</div>
+
+<div class="overlay" id="overlay">
+  <form class="sheet" id="form">
+    <h2 id="formTitle">新增行程</h2>
+    <input type="hidden" id="id">
+    <div class="grid">
+      <div class="field"><label>日期 *</label><input id="date" type="date" required></div>
+      <div class="field"><label>群組 *</label><select id="group" required><option value="ours">我們</option><option value="friends">朋友</option><option value="all">全部</option></select></div>
+      <div class="field"><label>開始時間</label><input id="start_time" type="time"></div>
+      <div class="field"><label>結束時間</label><input id="end_time" type="time"></div>
+      <div class="field full"><label>標題 *</label><input id="title" maxlength="120" required></div>
+      <div class="field"><label>城市</label><input id="city" maxlength="100"></div>
+      <div class="field"><label>確定程度 *</label><select id="certainty"><option value="confirmed">已確認</option><option value="tentative">暫定</option><option value="optional">可選</option></select></div>
+      <div class="field"><label>地點</label><select id="place_id"><option value="">— 無 —</option></select></div>
+      <div class="field"><label>排序 *</label><input id="order" type="number" min="0" step="1" value="10" required></div>
+      <div class="field full"><label>說明</label><textarea id="description" rows="3" maxlength="1000"></textarea></div>
+      <div class="field full"><label>私人備註</label><textarea id="notes" rows="3" maxlength="1000"></textarea></div>
+    </div>
+    <div class="sheet-actions"><button type="button" class="btn secondary" id="cancelBtn">取消</button><button type="submit" class="btn primary" id="saveBtn">儲存</button></div>
+  </form>
+</div>
+<div class="toast" id="toast"></div>
+<script>
+const state={itinerary:[],places:[]};
+const $=id=>document.getElementById(id);
+const esc=v=>String(v??'').replaceAll('&','&amp;').replaceAll('<','&lt;').replaceAll('>','&gt;').replaceAll('"','&quot;').replaceAll("'",'&#039;');
+const labels={ours:'我們',friends:'朋友',all:'全部',confirmed:'已確認',tentative:'暫定',optional:'可選'};
+
+function call(name,...args){return new Promise((resolve,reject)=>google.script.run.withSuccessHandler(resolve).withFailureHandler(e=>reject(new Error(e?.message||String(e))))[name](...args))}
+function toast(msg){$('toast').textContent=msg;$('toast').classList.add('show');setTimeout(()=>$('toast').classList.remove('show'),2200)}
+
+async function load(){
+  $('list').innerHTML='<div class="status">載入中…</div>';
+  try{
+    const data=await call('getAdminBootstrap');
+    state.itinerary=data.itinerary||[];state.places=data.places||[];
+    buildFilters();buildPlaces();render();
+  }catch(e){$('list').innerHTML=`<div class="card">載入失敗：${esc(e.message)}</div>`}
+}
+function buildFilters(){
+  const current=$('dateFilter').value;
+  const dates=[...new Set(state.itinerary.map(x=>x.date).filter(Boolean))].sort();
+  $('dateFilter').innerHTML='<option value="">全部日期</option>'+dates.map(d=>`<option value="${esc(d)}">${esc(d)}</option>`).join('');
+  if(dates.includes(current))$('dateFilter').value=current;
+}
+function buildPlaces(){
+  $('place_id').innerHTML='<option value="">— 無 —</option>'+[...state.places].sort((a,b)=>String(a.city||'').localeCompare(String(b.city||''))||String(a.name||'').localeCompare(String(b.name||''))).map(p=>`<option value="${esc(p.id)}">${esc(p.city||'')} · ${esc(p.name||p.id)}</option>`).join('');
+}
+function filtered(){
+  const date=$('dateFilter').value,g=$('groupFilter').value;
+  return state.itinerary.filter(x=>(!date||x.date===date)&&(g==='all'||(g==='common'?x.group==='all':x.group===g))).sort((a,b)=>String(a.date||'').localeCompare(String(b.date||''))||Number(a.order||0)-Number(b.order||0)||String(a.start_time||'').localeCompare(String(b.start_time||'')));
+}
+function render(){
+  const items=filtered();
+  $('list').innerHTML=items.length?items.map(x=>`<div class="card item"><div><h3>${esc(x.start_time||'—')} · ${esc(x.title)}</h3><div class="meta">${esc(x.date)} · ${esc(labels[x.group]||x.group)} · ${esc(x.city||'')}</div><div class="meta">${esc(labels[x.certainty]||x.certainty)} · order ${esc(x.order||'')}</div></div><div class="actions"><button class="btn secondary" data-edit="${esc(x.id)}">編輯</button><button class="btn danger" data-delete="${esc(x.id)}">刪除</button></div></div>`).join(''):'<div class="card empty">目前沒有符合條件的行程。</div>';
+  document.querySelectorAll('[data-edit]').forEach(b=>b.onclick=()=>openForm(state.itinerary.find(x=>x.id===b.dataset.edit)));
+  document.querySelectorAll('[data-delete]').forEach(b=>b.onclick=()=>removeItem(b.dataset.delete));
+}
+function openForm(item){
+  $('form').reset();$('id').value=item?.id||'';$('formTitle').textContent=item?'編輯行程':'新增行程';
+  const fields=['date','group','start_time','end_time','title','city','certainty','place_id','order','description','notes'];
+  fields.forEach(k=>{if(item&&item[k]!=null)$(k).value=item[k]});
+  if(!item){$('date').value=$('dateFilter').value||'2026-12-21';$('group').value='all';$('certainty').value='confirmed';$('order').value=10}
+  $('overlay').classList.add('open');
+}
+function closeForm(){$('overlay').classList.remove('open')}
+async function submitForm(e){
+  e.preventDefault();$('saveBtn').disabled=true;
+  const fields=['id','date','group','start_time','end_time','title','city','certainty','place_id','order','description','notes'];
+  const data={};fields.forEach(k=>data[k]=$(k).value);data.order=Number(data.order);
+  try{const r=await call('saveItinerary',data);closeForm();toast(r.action==='created'?'已新增行程':'已更新行程');await load()}catch(err){alert('儲存失敗：'+err.message)}finally{$('saveBtn').disabled=false}
+}
+async function removeItem(id){
+  const item=state.itinerary.find(x=>x.id===id);if(!confirm(`確定刪除「${item?.title||id}」？`))return;
+  try{await call('deleteItinerary',id);toast('已刪除行程');await load()}catch(err){alert('刪除失敗：'+err.message)}
+}
+$('addBtn').onclick=()=>openForm(null);$('cancelBtn').onclick=closeForm;$('form').onsubmit=submitForm;$('reloadBtn').onclick=load;$('dateFilter').onchange=render;$('groupFilter').onchange=render;$('overlay').onclick=e=>{if(e.target===$('overlay'))closeForm()};
+load();
+</script>
+</body>
+</html>
