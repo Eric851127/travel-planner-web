@@ -1,4 +1,3 @@
-
 const config=window.TRAVEL_PLANNER_CONFIG;
 const state={view:"today",group:config.defaultGroup||"all",date:config.defaultDate,cache:new Map()};
 const app=document.getElementById("app"),pageTitle=document.getElementById("pageTitle"),refreshBtn=document.getElementById("refreshBtn");
@@ -6,17 +5,40 @@ const app=document.getElementById("app"),pageTitle=document.getElementById("page
 const esc=v=>String(v??"").replaceAll("&","&amp;").replaceAll("<","&lt;").replaceAll(">","&gt;").replaceAll('"',"&quot;").replaceAll("'","&#039;");
 const statusLabel=v=>({confirmed:"Confirmed",tentative:"Tentative",optional:"Optional",need_booking:"Need booking",booked:"Booked",paid:"Paid",planned:"Planned",not_required:"Not required",cancelled:"Cancelled"}[v]||v||"");
 
+function jsonp(url,timeoutMs=12000){
+  return new Promise((resolve,reject)=>{
+    const callbackName="__travelPlannerJsonp_"+Date.now()+"_"+Math.random().toString(36).slice(2);
+    const script=document.createElement("script");
+    const timer=setTimeout(()=>cleanup(new Error("API request timed out")),timeoutMs);
+
+    function cleanup(error,data){
+      clearTimeout(timer);
+      delete window[callbackName];
+      script.remove();
+      error?reject(error):resolve(data);
+    }
+
+    window[callbackName]=data=>cleanup(null,data);
+    url.searchParams.set("callback",callbackName);
+    script.src=url.toString();
+    script.async=true;
+    script.onerror=()=>cleanup(new Error("API script failed to load"));
+    document.head.appendChild(script);
+  });
+}
+
 async function api(resource,params={},force=false){
   const url=new URL(config.apiBase+"/"+resource);
   Object.entries(params).forEach(([k,v])=>{if(v!==null&&v!==undefined&&v!=="")url.searchParams.set(k,v)});
   const key=url.toString();
   if(!force&&state.cache.has(key))return state.cache.get(key);
-  const res=await fetch(key,{cache:"no-store"});
-  if(!res.ok)throw new Error(`HTTP ${res.status}`);
-  const json=await res.json();
-  if(!json.success)throw new Error(json?.error?.message||"API error");
-  state.cache.set(key,json.data); return json.data;
+
+  const json=await jsonp(url);
+  if(!json||!json.success)throw new Error(json?.error?.message||"API error");
+  state.cache.set(key,json.data);
+  return json.data;
 }
+
 const groupParam=()=>state.group==="all"?null:state.group;
 const loading=()=>app.innerHTML='<div class="loading">Loading…</div>';
 const failed=e=>app.innerHTML=`<div class="card error">載入失敗：${esc(e.message)}</div>`;
