@@ -4,7 +4,7 @@
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
 <title>旅遊行程規劃</title>
-<link rel="stylesheet" href="styles.css?v=p5-mobile-20260903">
+<link rel="stylesheet" href="styles.css?v=p5-source-20260903">
 </head>
 <body>
 <div class="app-shell">
@@ -22,14 +22,119 @@
 </nav>
 </div>
 <script>
-window.TRAVEL_PLANNER_CONFIG = {
-  apiBase: "https://script.google.com/macros/s/AKfycbwAKt2KkcLKAQye2icfGYaCTEhranJTi-dS8Kr4zad9sK_vmh-tBaG91wgQbDmF82hR/exec",
-  defaultGroup: "all",
-  defaultDate: "2026-12-24",
-  buildVersion: "P5 · Mobile API Fix · 2026-09-03"
-};
+(() => {
+  const STORAGE_KEY = 'travelPlanner.apiBase.v1';
+  const BUILD_VERSION = 'P5 · Private Data Source · 2026-09-03';
+  const app = document.getElementById('app');
+  const pageTitle = document.getElementById('pageTitle');
+  const refreshBtn = document.getElementById('refreshBtn');
+  const nav = document.querySelector('.bottom-nav');
+
+  function normalizeApiUrl(value) {
+    const input = String(value || '').trim();
+    const url = new URL(input);
+    if (url.protocol !== 'https:') throw new Error('資料來源必須使用 HTTPS');
+    if (url.hostname !== 'script.google.com') throw new Error('只接受 Google Apps Script Web App URL');
+    if (!/^\/macros\/s\/[^/]+\/exec\/?$/.test(url.pathname)) throw new Error('請輸入以 /exec 結尾的 Apps Script Web App URL');
+    url.search = '';
+    url.hash = '';
+    return url.toString().replace(/\/$/, '');
+  }
+
+  function jsonpHealth(apiBase, timeoutMs = 18000) {
+    return new Promise((resolve, reject) => {
+      const callbackName = '__travelPlannerSetup_' + Date.now() + '_' + Math.random().toString(36).slice(2);
+      const script = document.createElement('script');
+      const url = new URL(apiBase);
+      url.searchParams.set('resource', 'health');
+      url.searchParams.set('callback', callbackName);
+      url.searchParams.set('_ts', Date.now().toString());
+      const timer = setTimeout(() => cleanup(new Error('連線逾時，請確認 Apps Script 已部署並允許存取')), timeoutMs);
+      function cleanup(error, data) {
+        clearTimeout(timer);
+        delete window[callbackName];
+        script.remove();
+        error ? reject(error) : resolve(data);
+      }
+      window[callbackName] = data => cleanup(null, data);
+      script.src = url.toString();
+      script.async = true;
+      script.onerror = () => cleanup(new Error('無法載入 API，請檢查 Apps Script 部署權限與 URL'));
+      document.head.appendChild(script);
+    });
+  }
+
+  function loadMainApp(apiBase) {
+    window.TRAVEL_PLANNER_CONFIG = {
+      apiBase,
+      defaultGroup: 'all',
+      defaultDate: '2026-12-24',
+      buildVersion: BUILD_VERSION,
+      storageKey: STORAGE_KEY
+    };
+
+    const appScript = document.createElement('script');
+    appScript.src = 'app.js?v=p5-source-20260903';
+    appScript.onload = () => {
+      const patchScript = document.createElement('script');
+      patchScript.src = 'p4.js?v=p5-source-20260903';
+      document.body.appendChild(patchScript);
+    };
+    document.body.appendChild(appScript);
+  }
+
+  function showSetup() {
+    pageTitle.textContent = '設定資料來源';
+    refreshBtn.hidden = true;
+    nav.hidden = true;
+    app.innerHTML = `
+      <section class="stack">
+        <div class="card">
+          <h2>連接旅程資料</h2>
+          <div class="meta">請貼上你的 Google Apps Script Web App URL。網址只會儲存在這台裝置的瀏覽器中，不會寫入 GitHub。</div>
+        </div>
+        <div class="card">
+          <label for="apiSourceInput"><strong>Apps Script Web App URL</strong></label>
+          <input id="apiSourceInput" type="url" inputmode="url" autocomplete="off" autocapitalize="off" spellcheck="false" placeholder="https://script.google.com/macros/s/.../exec" style="width:100%;box-sizing:border-box;margin-top:10px;padding:12px;border:1px solid #ccc;border-radius:10px;font-size:16px">
+          <button id="connectSourceBtn" class="retry-button" type="button" style="margin-top:12px;width:100%">測試並儲存</button>
+          <div id="sourceStatus" class="meta" style="margin-top:10px"></div>
+        </div>
+      </section>`;
+
+    const input = document.getElementById('apiSourceInput');
+    const button = document.getElementById('connectSourceBtn');
+    const status = document.getElementById('sourceStatus');
+
+    button.onclick = async () => {
+      button.disabled = true;
+      status.textContent = '正在測試連線…';
+      try {
+        const apiBase = normalizeApiUrl(input.value);
+        const response = await jsonpHealth(apiBase);
+        if (!response || !response.success) throw new Error(response?.error?.message || 'Health check 未通過');
+        localStorage.setItem(STORAGE_KEY, apiBase);
+        status.textContent = '連線成功，正在開啟旅程…';
+        location.reload();
+      } catch (error) {
+        status.textContent = '連線失敗：' + (error?.message || '未知錯誤');
+        button.disabled = false;
+      }
+    };
+  }
+
+  const saved = localStorage.getItem(STORAGE_KEY);
+  if (!saved) {
+    showSetup();
+    return;
+  }
+
+  try {
+    loadMainApp(normalizeApiUrl(saved));
+  } catch (error) {
+    localStorage.removeItem(STORAGE_KEY);
+    showSetup();
+  }
+})();
 </script>
-<script src="app.js?v=p5-mobile-20260903"></script>
-<script src="p4.js?v=p5-mobile-20260903"></script>
 </body>
 </html>
