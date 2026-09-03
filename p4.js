@@ -57,12 +57,8 @@ renderMore = function() {
       <div class="meta">旅客唯讀版 · API v1 · ${esc(version)}</div>
     </div>
     <div class="card">
-      <h3>目前使用的 API</h3>
-      <div class="meta" style="word-break:break-all">${esc(config.apiBase)}</div>
-    </div>
-    <div class="card">
       <h3>P5 狀態</h3>
-      <div class="meta">真實行程資料導入中 · 手機 API 相容模式已啟用</div>
+      <div class="meta">真實行程資料導入中 · 手機 API 相容模式已啟用 · 公開欄位安全收斂中</div>
     </div>
   </div>`;
 };
