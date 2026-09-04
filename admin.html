@@ -5,7 +5,9 @@
 <meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
 <meta name="theme-color" content="#f7f7f8">
 <title>Travel Planner Admin</title>
-<meta http-equiv="refresh" content="0;url=admin-p11.html">
+</head>
+<body>
+<p>正在開啟 Travel Planner Admin… <a href="admin-p11.html">點此進入</a></p>
 <script>
 (function(){
   var endpointKey='travelPlanner.p9AuthEndpoint.v1';
@@ -16,11 +18,21 @@
     var hasEndpoint=!!String(localStorage.getItem(endpointKey)||'').trim();
     if(hasSession&&!hasEndpoint)localStorage.setItem(endpointKey,productionEndpoint);
   }catch(_){}
-  location.replace('admin-p11.html');
+
+  var marker='<div class="top-actions"><button class="btn secondary" id="logoutBtn" hidden>登出</button>';
+  var replacement='<div class="top-actions"><button class="btn secondary" id="travelerBtn" type="button" onclick="location.href=\'./\'">查看旅程</button><button class="btn secondary" id="logoutBtn" hidden>登出</button>';
+
+  fetch('admin-p11.html',{cache:'no-store'})
+    .then(function(response){if(!response.ok)throw new Error('ADMIN_LOAD_FAILED');return response.text();})
+    .then(function(html){
+      if(html.indexOf(marker)<0)throw new Error('ADMIN_HEADER_MARKER_NOT_FOUND');
+      html=html.replace(marker,replacement);
+      document.open();
+      document.write(html);
+      document.close();
+    })
+    .catch(function(){location.replace('admin-p11.html');});
 })();
 </script>
-</head>
-<body>
-<p>正在開啟 Travel Planner Admin… <a href="admin-p11.html">點此進入</a></p>
 </body>
 </html>
