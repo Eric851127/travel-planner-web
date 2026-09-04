@@ -3,7 +3,18 @@ function p10RunCrudGateAuthorized_(admin){
   const marker='P10-GATE-'+Date.now();
   const ids={};
   const steps=[];
-  function run(name,fn){const value=fn();steps.push({step:name,pass:true,result:value});return value;}
+  let currentStep='initializing';
+  function run(name,fn){
+    currentStep=name;
+    try{
+      const value=fn();
+      steps.push({step:name,pass:true,result:value});
+      return value;
+    }catch(error){
+      if(error&&typeof error==='object')error.p10GateStep=name;
+      throw error;
+    }
+  }
   try{
     ids.placeA=run('create place A',function(){return p10SaveEntityAuthorized_('places',{name:marker+' A',city:'Tokyo',category:'test',address:'',opening_hours:'',website:'',notes:'temporary P10 gate'},'P',p10ValidatePlace_);}).id;
     ids.placeB=run('create place B',function(){return p10SaveEntityAuthorized_('places',{name:marker+' B',city:'Tokyo',category:'test',address:'',opening_hours:'',website:'',notes:'temporary P10 gate'},'P',p10ValidatePlace_);}).id;
@@ -21,6 +32,7 @@ function p10RunCrudGateAuthorized_(admin){
     run('update itinerary',function(){return p10SaveEntityAuthorized_('itinerary',{id:ids.itinerary,date:'2026-12-01',start_time:'12:05',end_time:'13:00',group:'ours',city:'Tokyo',title:marker+' Itinerary Updated',description:'updated',place_id:ids.placeB,transport_id:ids.transport,reservation_id:ids.reservation,certainty:'confirmed',notes:''},'I',p10ValidateItinerary_);});
 
     const bootstrap=run('bootstrap readback',function(){return p10GetAdminBootstrapAuthorized_(admin);});
+    currentStep='readback assertions';
     const checks={
       itinerary:bootstrap.itinerary.some(function(r){return r.id===ids.itinerary&&String(r.title||'').indexOf('Updated')>=0;}),
       reservation:bootstrap.reservations.some(function(r){return r.id===ids.reservation&&String(r.name||'').indexOf('Updated')>=0;}),
@@ -29,7 +41,7 @@ function p10RunCrudGateAuthorized_(admin){
       transport:bootstrap.transport.some(function(r){return r.id===ids.transport&&r.service_no==='TEST2';}),
       place:bootstrap.places.some(function(r){return r.id===ids.placeA&&r.category==='test-updated';})
     };
-    if(Object.keys(checks).some(function(k){return !checks[k];}))throw p10Error_('INTERNAL_ERROR','P10 gate readback mismatch.');
+    if(Object.keys(checks).some(function(k){return !checks[k];}))throw p10Error_('INTERNAL_ERROR','P10 gate readback mismatch: '+JSON.stringify(checks));
     steps.push({step:'readback assertions',pass:true,result:checks});
 
     run('delete itinerary',function(){const r=p10DeleteEntityAuthorized_('itinerary',ids.itinerary,/^I\d{3,}$/,function(){});delete ids.itinerary;return r;});
@@ -42,10 +54,12 @@ function p10RunCrudGateAuthorized_(admin){
 
     return{phase:'P10-admin-api',gate:'crud-roundtrip',ok:true,marker:marker,steps:steps.length,cleanup:'complete'};
   } catch(error){
-    steps.push({step:'gate failure',pass:false,error:String((error&&error.message)||error)});
+    const failedStep=String((error&&error.p10GateStep)||currentStep||'unknown');
+    const rawMessage=String((error&&error.message)||error||'UNKNOWN_ERROR');
+    steps.push({step:failedStep,pass:false,error:rawMessage});
     p10CleanupGateIds_(ids);
     const mapped=p10MapError_(error);
-    throw p10Error_(mapped.code,'CRUD gate failed: '+mapped.message);
+    throw p10Error_(mapped.code,'CRUD gate failed at ['+failedStep+']: '+rawMessage);
   }
 }
 
