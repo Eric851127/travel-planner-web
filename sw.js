@@ -1,4 +1,4 @@
-const CACHE_NAME = 'travel-planner-p13-auth-postsession-bootstrap-20260904';
+const CACHE_NAME = 'travel-planner-p13-2-mode-switch-20260904';
 const APP_SHELL = [
   './',
   './index.html',
