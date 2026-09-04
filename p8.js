@@ -1,6 +1,6 @@
 /* P12 production Admin cutover + Maps settings */
 (function () {
-  const ADMIN_PATH = 'admin-p11.html';
+  const ADMIN_PATH = 'admin.html';
   const MAP_SETTINGS_KEY = 'travelPlanner.googleMaps.v1';
   let installPrompt = null;
 
