@@ -3,312 +3,163 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
-<meta name="theme-color" content="#fff">
-<title>Travel Planner P9.4 + P9.5 Gate</title>
+<meta name="theme-color" content="#f7f7f8">
+<title>Travel Planner Admin 登入</title>
 <style>
-:root{font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",sans-serif;color:#161616;background:#f5f5f7}
-*{box-sizing:border-box}body{margin:0}.shell{max-width:680px;margin:0 auto;padding:24px 16px 48px}
-.card{background:#fff;border-radius:18px;padding:18px;margin:14px 0;box-shadow:0 1px 8px rgba(0,0,0,.06)}
-h1{font-size:28px;margin:8px 0 6px}h2{font-size:19px;margin:0 0 10px}.meta{color:#666;font-size:14px;line-height:1.5}
-.btn{width:100%;min-height:50px;border:0;border-radius:14px;font-size:16px;font-weight:700;padding:12px 16px;margin-top:12px}
-.primary{background:#111;color:#fff}.secondary{background:#eee;color:#111}.danger{background:#fbe9e7;color:#8a1c12}
-.status{white-space:pre-wrap;word-break:break-word;background:#f6f6f6;border-radius:12px;padding:12px;font:13px ui-monospace,SFMono-Regular,Menlo,monospace}
-.ok{color:#067647}.bad{color:#b42318}input{width:100%;min-height:48px;border:1px solid #ccc;border-radius:12px;padding:11px 12px;font-size:16px;margin-top:8px}
+:root{font-family:system-ui,-apple-system,"Noto Sans TC",sans-serif;color:#202124;background:#f7f7f8}
+*{box-sizing:border-box}html{-webkit-text-size-adjust:100%}body{margin:0;min-height:100vh;background:#f7f7f8;color:#202124}
+.shell{min-height:100vh;display:flex;align-items:center;justify-content:center;padding:24px 16px calc(24px + env(safe-area-inset-bottom))}
+.card{width:min(100%,460px);background:#fff;border:1px solid #e3e3e3;border-radius:22px;padding:28px;box-shadow:0 10px 30px rgba(0,0,0,.06)}
+.brand{font-size:14px;font-weight:700;letter-spacing:.02em;color:#666;margin-bottom:10px}.icon{width:54px;height:54px;border-radius:16px;background:#202124;color:#fff;display:grid;place-items:center;font-size:27px;margin-bottom:18px}
+h1{font-size:28px;line-height:1.25;margin:0 0 8px}.lead{color:#666;font-size:16px;line-height:1.65;margin:0 0 22px}
+.btn{width:100%;min-height:52px;border-radius:13px;border:0;padding:12px 16px;font:inherit;font-weight:700;cursor:pointer}.btn:disabled{opacity:.55;cursor:default}.primary{background:#202124;color:#fff}.secondary{margin-top:10px;background:#fff;border:1px solid #dadce0;color:#202124}
+.status{display:none;margin:18px 0 0;padding:13px 14px;border-radius:12px;background:#f7f8f9;border:1px solid #e3e3e3;font-size:14px;line-height:1.55}.status.show{display:block}.status.error{background:#fff8f7;border-color:#f2b8b5;color:#8a1c12}.status.ok{background:#eef7ee;border-color:#b7d7b7;color:#176b2c}
+.spinner{display:inline-block;width:16px;height:16px;border:2px solid currentColor;border-right-color:transparent;border-radius:50%;vertical-align:-3px;margin-right:8px;animation:spin .8s linear infinite}@keyframes spin{to{transform:rotate(360deg)}}
+.footer{margin-top:20px;text-align:center;color:#8a8a8a;font-size:12px;line-height:1.5}
+@media(max-width:520px){.shell{align-items:stretch;padding:0}.card{width:100%;min-height:100dvh;border:0;border-radius:0;box-shadow:none;padding:calc(42px + env(safe-area-inset-top)) 22px calc(28px + env(safe-area-inset-bottom));display:flex;flex-direction:column;justify-content:center}.icon{width:58px;height:58px}.btn{min-height:54px;font-size:17px}.lead{font-size:17px}}
 </style>
 </head>
 <body>
 <main class="shell">
-<div class="meta">P9.4 + P9.5 · Session lifecycle + protected API</div>
-<h1>Admin Session Test</h1>
-<div class="meta">一次驗收 Session lifecycle 與 GitHub Pages → Apps Script protected API transport。每次 protected call 都重新查 Members。沒有 Admin CRUD。</div>
-
-<section class="card">
-<h2>1. Apps Script P9 URL</h2>
-<div class="meta">貼上獨立 P9 Web App /exec URL，只儲存在目前裝置。</div>
-<input id="endpoint" type="url" inputmode="url" autocomplete="off" placeholder="https://script.google.com/macros/s/.../exec">
-<button id="saveEndpoint" class="btn secondary">儲存 P9 URL</button>
-</section>
-
-<section class="card">
-<h2>2. Transport Probe</h2>
-<button id="getProbe" class="btn secondary">測試 GET</button>
-<button id="postProbe" class="btn secondary">測試 POST</button>
-<div id="probeStatus" class="status">尚未測試</div>
-</section>
-
-<section class="card">
-<h2>3. Google Authentication</h2>
-<div class="meta">登入成功後，Apps Script 會簽發 1 小時 Travel Planner session。畫面不顯示 bearer token。</div>
-<button id="login" class="btn primary">使用 Google 建立 Session</button>
-<div id="authStatus" class="status">尚未登入</div>
-</section>
-
-<section class="card">
-<h2>4. Travel Planner Session</h2>
-<div class="meta">Session token 儲存在本裝置 localStorage。每次 restore 都由 backend 驗簽、驗期限，再重新查 Members。</div>
-<button id="restore" class="btn secondary">重新驗證 Session</button>
-<button id="logout" class="btn danger">登出並清除 Session</button>
-<div id="sessionStatus" class="status">尚無 Session</div>
-</section>
-
-<section class="card">
-<h2>5. Protected API PoC</h2>
-<div class="meta">公開 GET/POST probe 驗證跨來源 transport；受保護 API 不把 bearer token 放在 URL，而使用 POST application/x-www-form-urlencoded。Backend 必須驗 session 並重新查 Members。</div>
-<button id="protectedPost" class="btn secondary">測試 Protected POST</button>
-<div id="apiStatus" class="status">尚未測試</div>
-</section>
+  <section class="card" aria-live="polite">
+    <div class="icon" aria-hidden="true">✈︎</div>
+    <div class="brand">Travel Planner</div>
+    <h1 id="title">行程管理</h1>
+    <p class="lead" id="lead">使用 Google 帳戶登入，以管理旅程內容。</p>
+    <button class="btn primary" id="loginBtn" type="button">使用 Google 帳戶登入</button>
+    <button class="btn secondary" id="travelerBtn" type="button">返回旅客端</button>
+    <div class="status" id="status"></div>
+    <div class="footer">管理權限由 Travel Planner 成員設定決定。</div>
+  </section>
 </main>
-
 <script>
-(function(){
+(function(){'use strict';
   const ENDPOINT_KEY='travelPlanner.p9AuthEndpoint.v1';
   const SESSION_KEY='travelPlanner.p9Session.v1';
-  const ADMIN_RETURN_KEY='travelPlanner.p11ReturnTo.v1';
+  const RETURN_KEY='travelPlanner.p11ReturnTo.v1';
+  const ADMIN_PATH='/travel-planner-web/admin.html';
+  const TRAVELER_PATH='/travel-planner-web/';
 
-  const endpointInput=document.getElementById('endpoint');
-  const probeStatus=document.getElementById('probeStatus');
-  const authStatus=document.getElementById('authStatus');
-  const sessionStatus=document.getElementById('sessionStatus');
-  const apiStatus=document.getElementById('apiStatus');
+  const title=document.getElementById('title');
+  const lead=document.getElementById('lead');
+  const loginBtn=document.getElementById('loginBtn');
+  const travelerBtn=document.getElementById('travelerBtn');
+  const status=document.getElementById('status');
 
   function endpoint(){return String(localStorage.getItem(ENDPOINT_KEY)||'').trim();}
-  function sessionToken(){return String(localStorage.getItem(SESSION_KEY)||'').trim();}
-  function normalized(value){
-    const u=new URL(String(value||'').trim());
-    if(u.protocol!=='https:'||u.hostname!=='script.google.com'||!/^\/macros\/s\/[^/]+\/exec\/?$/.test(u.pathname)){
-      throw new Error('請輸入有效的 Apps Script /exec URL');
-    }
-    u.search='';u.hash='';
-    return u.toString().replace(/\/$/,'');
-  }
+  function token(){return String(localStorage.getItem(SESSION_KEY)||'').trim();}
   function callbackUrl(){return location.origin+location.pathname;}
-  function show(el,value,ok){
-    el.textContent=typeof value==='string'?value:JSON.stringify(value,null,2);
-    el.classList.toggle('ok',ok===true);
-    el.classList.toggle('bad',ok===false);
+  function travelerUrl(){return location.origin+TRAVELER_PATH;}
+  function defaultAdminUrl(){return location.origin+ADMIN_PATH;}
+  function clearOAuthQuery(){if(location.search||location.hash)history.replaceState(null,'',location.pathname);}
+  function setBusy(message){
+    title.textContent='正在完成登入';
+    lead.textContent='正在確認你的 Google 帳戶與管理權限。';
+    loginBtn.hidden=true;
+    travelerBtn.hidden=true;
+    status.className='status show';
+    status.innerHTML='<span class="spinner" aria-hidden="true"></span>'+message;
   }
-  function safeAuthView(data){
-    const copy=Object.assign({},data||{});
-    delete copy.session_token;
-    return copy;
+  function showIdle(){
+    title.textContent='行程管理';
+    lead.textContent='使用 Google 帳戶登入，以管理旅程內容。';
+    loginBtn.hidden=false;loginBtn.disabled=false;loginBtn.textContent='使用 Google 帳戶登入';travelerBtn.hidden=false;
+    status.className='status';status.textContent='';
   }
-  function sessionMessage(data){
-    if(!data)return '無法取得 Session 狀態。';
-    if(data.session_valid&&data.admin)return '已登入，Admin Session 有效。';
-    if(data.session_valid&&!data.admin)return '已登入，但目前沒有 Admin 權限。';
-    const code=data.error&&data.error.code;
-    if(code==='SESSION_EXPIRED')return 'Session 已過期，請重新登入。';
-    if(code==='SESSION_REVOKED')return 'Session 已登出，請重新登入。';
-    if(code==='UNAUTHENTICATED')return '尚未登入或 Session 無效，請重新登入。';
-    return 'Session 驗證失敗。';
+  function showError(message,forbidden){
+    title.textContent=forbidden?'沒有管理權限':'登入未完成';
+    lead.textContent=forbidden?'這個 Google 帳戶目前無法使用行程管理功能。':'請重新登入，或返回旅客端稍後再試。';
+    loginBtn.hidden=false;loginBtn.disabled=false;loginBtn.textContent=forbidden?'使用其他 Google 帳戶':'重新登入';
+    travelerBtn.hidden=false;
+    status.className='status show error';status.textContent=message;
   }
-  function apiMessage(data){
-    if(data&&data.ok)return 'Protected API 驗證成功。';
-    const code=data&&data.error&&data.error.code;
-    if(code==='FORBIDDEN')return '已登入，但沒有 Admin 權限。';
-    if(code==='SESSION_EXPIRED')return 'Session 已過期，請重新登入。';
-    if(code==='SESSION_REVOKED'||code==='UNAUTHENTICATED')return 'Session 無效，請重新登入。';
-    return 'Protected API 呼叫失敗。';
+  function errorCode(data){
+    if(!data)return '';
+    if(data.error&&typeof data.error==='object')return String(data.error.code||'');
+    return String(data.code||'');
   }
-  function clearOAuthQuery(){
-    if(location.search||location.hash){
-      history.replaceState(null,'',location.pathname);
+  function errorMessage(data,fallback){
+    if(data&&data.error&&typeof data.error==='object'&&data.error.message)return String(data.error.message);
+    if(data&&typeof data.error==='string'&&data.error)return data.error;
+    if(data&&data.message)return String(data.message);
+    return fallback;
+  }
+  function safeAdminTarget(){
+    const raw=String(localStorage.getItem(RETURN_KEY)||'').trim();
+    if(raw){
+      try{
+        const u=new URL(raw,location.origin);
+        if(u.origin===location.origin&&/^\/travel-planner-web\/(admin\.html|admin-p11\.html)$/.test(u.pathname))return defaultAdminUrl();
+      }catch(_){}
     }
+    return defaultAdminUrl();
   }
-  function adminReturnTarget(){
-    const raw=String(localStorage.getItem(ADMIN_RETURN_KEY)||'').trim();
-    if(!raw)return '';
-    try{
-      const u=new URL(raw,location.origin);
-      if(u.origin!==location.origin)return '';
-      if(!/\/travel-planner-web\/(admin\.html|admin-p11\.html)$/.test(u.pathname))return '';
-      return location.origin+'/travel-planner-web/admin.html';
-    }catch(_){return '';}
-  }
-  function maybeReturnToAdmin(session){
-    const target=adminReturnTarget();
-    if(!target||!session||!session.session_valid||!session.admin)return false;
-    localStorage.removeItem(ADMIN_RETURN_KEY);
-    location.replace(target);
-    return true;
+  function goAdmin(){localStorage.removeItem(RETURN_KEY);location.replace(safeAdminTarget());}
+  function clearSession(){localStorage.removeItem(SESSION_KEY);}
+
+  async function sessionCheck(){
+    const base=endpoint(),sessionToken=token();
+    if(!base||!sessionToken)return null;
+    const r=await fetch(base,{method:'POST',body:new URLSearchParams({mode:'session_check',session_token:sessionToken}),redirect:'follow'});
+    const data=await r.json();
+    if(!data.session_valid)clearSession();
+    return data;
   }
 
-  endpointInput.value=endpoint();
-
-  document.getElementById('saveEndpoint').onclick=()=>{
+  async function startLogin(){
+    const base=endpoint();
+    if(!base){showError('目前無法連線到管理服務。請返回旅客端後再試一次。',false);return;}
+    loginBtn.disabled=true;
+    setBusy('正在前往 Google 登入…');
     try{
-      const v=normalized(endpointInput.value);
-      localStorage.setItem(ENDPOINT_KEY,v);
-      endpointInput.value=v;
-      show(probeStatus,'P9 URL 已儲存。',true);
-    }catch(e){show(probeStatus,e.message,false);}
-  };
-
-  document.getElementById('getProbe').onclick=async()=>{
-    try{
-      const base=endpoint();
-      if(!base)throw new Error('請先儲存 P9 URL');
-      const r=await fetch(base+'?mode=probe',{redirect:'follow'});
-      show(probeStatus,{status:r.status,url:r.url,body:await r.json()},r.ok);
-    }catch(e){show(probeStatus,'GET failed: '+(e.message||e),false);}
-  };
-
-  document.getElementById('postProbe').onclick=async()=>{
-    try{
-      const base=endpoint();
-      if(!base)throw new Error('請先儲存 P9 URL');
-      const r=await fetch(base,{
-        method:'POST',
-        body:new URLSearchParams({mode:'probe',echo:'github-pwa'}),
-        redirect:'follow'
-      });
-      show(probeStatus,{status:r.status,url:r.url,body:await r.json()},r.ok);
-    }catch(e){show(probeStatus,'POST failed: '+(e.message||e),false);}
-  };
-
-  document.getElementById('login').onclick=async()=>{
-    try{
-      const base=endpoint();
-      if(!base)throw new Error('請先儲存 P9 URL');
-      show(authStatus,'正在建立 Google 登入請求…');
-      const r=await fetch(
-        base+'?mode=auth_start&return_url='+encodeURIComponent(callbackUrl()),
-        {redirect:'follow'}
-      );
+      const r=await fetch(base+'?mode=auth_start&return_url='+encodeURIComponent(callbackUrl()),{redirect:'follow'});
       const data=await r.json();
-      if(!r.ok||!data.ok||!data.auth_url)throw new Error(data.error||'AUTH_START_FAILED');
+      if(!r.ok||!data.ok||!data.auth_url)throw new Error(errorMessage(data,'無法建立 Google 登入請求。'));
       location.href=data.auth_url;
-    }catch(e){show(authStatus,e.message||String(e),false);}
-  };
-
-  async function restoreSession(){
-    const token=sessionToken();
-    if(!token){show(sessionStatus,'尚無 Session');return null;}
-    try{
-      const base=endpoint();
-      if(!base)throw new Error('找不到 Apps Script P9 URL');
-      show(sessionStatus,'正在驗證 Session…');
-      const r=await fetch(base,{method:'POST',body:new URLSearchParams({mode:'session_check',session_token:token}),redirect:'follow'});
-      const data=await r.json();
-      if(!data.session_valid){
-        localStorage.removeItem(SESSION_KEY);
-        show(sessionStatus,sessionMessage(data),false);
-        return data;
-      }
-      show(sessionStatus,{
-        message:sessionMessage(data),
-        authenticated:data.authenticated,
-        session_valid:data.session_valid,
-        email:data.email,
-        sub:data.sub,
-        session_exp:data.session_exp,
-        member_found:data.member_found,
-        active:data.active,
-        admin:data.admin,
-        authorization:data.authorization
-      },!!data.admin);
-      return data;
-    }catch(e){
-      show(sessionStatus,'Session 驗證失敗，請稍後重試。',false);
-      return null;
-    }
+    }catch(e){showError(e&&e.message?e.message:'無法建立 Google 登入請求。',false);}
   }
-
-  document.getElementById('restore').onclick=restoreSession;
-
-  document.getElementById('logout').onclick=async()=>{
-    const token=sessionToken();
-    try{
-      const base=endpoint();
-      if(base&&token){
-        await fetch(base,{method:'POST',body:new URLSearchParams({mode:'session_logout',session_token:token}),redirect:'follow'});
-      }
-    }catch(_){}
-    localStorage.removeItem(SESSION_KEY);
-    localStorage.removeItem(ADMIN_RETURN_KEY);
-    show(authStatus,'已登出。');
-    show(sessionStatus,'Session 已撤銷並從此裝置清除。',true);
-    show(apiStatus,'尚未測試');
-  };
-
-  async function protectedPost(){
-    const token=sessionToken();
-    if(!token){show(apiStatus,'尚未登入，無法呼叫 Protected API。',false);return;}
-    try{
-      const base=endpoint();
-      if(!base)throw new Error('NO_ENDPOINT');
-      show(apiStatus,'正在測試 Protected POST…');
-      const r=await fetch(base,{
-        method:'POST',
-        body:new URLSearchParams({mode:'protected_probe',session_token:token}),
-        redirect:'follow'
-      });
-      const data=await r.json();
-      show(apiStatus,{message:apiMessage(data),response:data},!!data.ok);
-    }catch(_){show(apiStatus,'Protected POST transport 失敗。',false);}
-  }
-
-  document.getElementById('protectedPost').onclick=protectedPost;
 
   async function finishOAuth(){
     const q=new URLSearchParams(location.search);
-    const code=q.get('code');
-    const state=q.get('state');
-    const error=q.get('error');
-
-    if(!code&&!error)return false;
-
+    const code=q.get('code'),state=q.get('state'),oauthError=q.get('error');
+    if(!code&&!oauthError)return false;
     clearOAuthQuery();
-
+    const base=endpoint();
+    if(!base){showError('登入已返回，但目前無法連線到管理服務。',false);return true;}
+    setBusy('Google 已驗證，正在建立管理工作階段…');
     try{
-      const base=endpoint();
-      if(!base){
-        throw new Error('OAuth 已回到 GitHub，但此瀏覽器沒有儲存 Apps Script URL。請重新貼上 URL 後再登入。');
-      }
-
-      show(authStatus,'Google 已回傳，正在建立 Travel Planner Session…');
-
-      const r=await fetch(base,{
-        method:'POST',
-        body:new URLSearchParams({
-          mode:'auth_finish',
-          state:state||'',
-          code:code||'',
-          oauth_error:error||''
-        }),
-        redirect:'follow'
-      });
-
+      const r=await fetch(base,{method:'POST',body:new URLSearchParams({mode:'auth_finish',state:state||'',code:code||'',oauth_error:oauthError||''}),redirect:'follow'});
       const data=await r.json();
-
-      if(data.session_token){
-        localStorage.setItem(SESSION_KEY,data.session_token);
+      if(data.session_token)localStorage.setItem(SESSION_KEY,data.session_token);
+      if(!data.session_token){
+        const codeValue=errorCode(data);
+        showError(errorMessage(data,oauthError?'Google 登入已取消或未完成。':'無法完成登入。'),codeValue==='FORBIDDEN');
+        return true;
       }
-
-      show(
-        authStatus,
-        safeAuthView(data),
-        !!(data.authenticated&&data.active&&data.admin)
-      );
-
-      if(data.session_token){
-        const session=await restoreSession();
-        if(maybeReturnToAdmin(session))return true;
-      }
-
-    }catch(e){
-      show(authStatus,'完成驗證失敗：'+(e.message||e),false);
-    }
-
+      setBusy('正在確認管理權限…');
+      const session=await sessionCheck();
+      if(session&&session.session_valid&&session.admin){goAdmin();return true;}
+      const codeValue=errorCode(session);
+      showError(errorMessage(session,'此帳戶目前無法使用行程管理功能。'),!!(session&&session.session_valid&&!session.admin)||codeValue==='FORBIDDEN');
+    }catch(e){showError('完成登入時發生連線錯誤，請重新登入。',false);}
     return true;
   }
 
+  loginBtn.addEventListener('click',startLogin);
+  travelerBtn.addEventListener('click',function(){location.href=travelerUrl();});
+
   (async function init(){
     const handled=await finishOAuth();
-    if(!handled){
-      const session=await restoreSession();
-      maybeReturnToAdmin(session);
-    }
+    if(handled)return;
+    if(!endpoint()){showError('目前無法連線到管理服務。請返回旅客端後再試一次。',false);return;}
+    if(!token()){showIdle();return;}
+    setBusy('正在確認目前的登入狀態…');
+    try{
+      const session=await sessionCheck();
+      if(session&&session.session_valid&&session.admin){goAdmin();return;}
+      if(session&&session.session_valid&&!session.admin){showError('此 Google 帳戶目前沒有 Admin 管理權限。',true);return;}
+      showIdle();
+    }catch(_){showError('目前無法確認登入狀態，請稍後再試。',false);}
   })();
 })();
 </script>
