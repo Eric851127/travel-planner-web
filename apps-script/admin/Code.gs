@@ -8,7 +8,50 @@ const ADMIN_CONFIG = {
   TRANSPORT_TYPES: ['train','bus','ferry','rental_car','airport_transfer','other']
 };
 
-function doGet(){return HtmlService.createHtmlOutputFromFile('Admin').setTitle('Travel Planner Admin').setXFrameOptionsMode(HtmlService.XFrameOptionsMode.ALLOWALL);}
+function doGet(){
+  const mobileCss = `<style>
+  @media(max-width:650px){
+    html{-webkit-text-size-adjust:100%}
+    body{font-size:16px;line-height:1.5}
+    .shell{padding:18px 14px 40px}
+    .top{align-items:center;gap:10px;margin-bottom:16px}
+    .top h1{font-size:24px;line-height:1.25}
+    .meta,.admin-id{font-size:14px;line-height:1.5}
+    .admin-id{margin-top:6px}
+    .tabs{gap:6px;padding:4px;margin-bottom:14px}
+    .tab{min-width:86px;min-height:46px;padding:11px 14px;font-size:16px;border-radius:10px}
+    .btn{min-height:48px;padding:12px 15px;font-size:16px;border-radius:12px}
+    #addBtn{min-width:92px}
+    .toolbar{gap:10px;margin-bottom:14px}
+    .toolbar select{flex:1 1 46%;min-width:0;min-height:48px;padding:11px 12px;font-size:16px;border-radius:11px}
+    #reloadBtn{flex:1 1 100%}
+    .quality-pill{font-size:14px;padding:8px 11px;margin-bottom:14px}
+    .card{padding:16px;border-radius:16px;margin-bottom:14px}
+    .item{gap:14px}
+    .item h3{font-size:18px;line-height:1.4;margin-bottom:7px}
+    .actions{gap:8px;width:100%}
+    .actions .btn{flex:1;min-height:46px;padding:11px 10px;font-size:15px}
+    .warning-title{font-size:15px;margin-top:10px}
+    .warning-line{font-size:14px;line-height:1.5;margin-top:5px}
+    .empty,.status{font-size:16px;padding:28px 16px}
+    .sheet{max-height:96vh;padding:20px 16px 24px;border-radius:20px 20px 0 0}
+    .sheet h2{font-size:22px;margin:0 0 18px}
+    .grid{grid-template-columns:1fr;gap:16px}
+    .field.full,.location-status{grid-column:auto}
+    .field label{font-size:15px;margin-bottom:7px}
+    .field input,.field select,.field textarea{min-height:50px;padding:12px 13px;font-size:16px;border-radius:11px}
+    .field textarea{min-height:96px;line-height:1.5}
+    .location-status{padding:13px 14px;font-size:14px;line-height:1.5;border-radius:12px}
+    .sheet-actions{gap:10px;padding-top:16px;padding-bottom:calc(4px + env(safe-area-inset-bottom))}
+    .sheet-actions .btn{min-height:50px;font-size:16px}
+    .toast{bottom:calc(18px + env(safe-area-inset-bottom));max-width:calc(100vw - 32px);font-size:15px;text-align:center}
+  }
+  </style>`;
+  return HtmlService.createHtmlOutputFromFile('Admin')
+    .append(mobileCss)
+    .setTitle('Travel Planner Admin')
+    .setXFrameOptionsMode(HtmlService.XFrameOptionsMode.ALLOWALL);
+}
 function getAdminIdentity_(){const email=String(Session.getActiveUser().getEmail()||'').trim().toLowerCase();if(!email)throw new Error('無法取得目前登入的 Google 帳戶。請確認 Admin Web App 設為「以存取 Web App 的使用者身分執行」，並重新授權。');return email;}
 function isTruthyAdminValue_(value){const v=String(value==null?'':value).trim().toLowerCase();return value===true||v==='true'||v==='1'||v==='yes';}
 function getAuthorizedAdmin_(){const email=getAdminIdentity_(),ss=SpreadsheetApp.openById(ADMIN_CONFIG.SPREADSHEET_ID),members=readSheetObjects_(requiredSheet_(ss,ADMIN_CONFIG.SHEETS.members));const member=members.find(function(row){return String(row.email||'').trim().toLowerCase()===email;});if(!member)throw new Error('此 Google 帳戶尚未加入 Admin 授權名單：'+email);if(!isTruthyAdminValue_(member.active))throw new Error('此成員目前已停用，無法使用 Admin。');if(!isTruthyAdminValue_(member.admin_access))throw new Error('此帳戶沒有 Admin 管理權限。');return{id:member.id||'',name:member.name||email,email:email,group:member.group||'',role:member.role||''};}
