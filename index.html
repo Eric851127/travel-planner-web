@@ -24,7 +24,7 @@
 <script>
 (() => {
   const STORAGE_KEY = 'travelPlanner.apiBase.v1';
-  const BUILD_VERSION = 'P7.2 + P7.3 + P7.4 · 2026-09-04';
+  const BUILD_VERSION = 'P7.7 · 2026-09-04';
   const app = document.getElementById('app');
   const pageTitle = document.getElementById('pageTitle');
   const refreshBtn = document.getElementById('refreshBtn');
@@ -41,7 +41,7 @@
     return url.toString().replace(/\/$/, '');
   }
 
-  function jsonpHealth(apiBase, timeoutMs = 18000) {
+  function jsonpHealth(apiBase, timeoutMs = 20000) {
     return new Promise((resolve, reject) => {
       const callbackName = '__travelPlannerSetup_' + Date.now() + '_' + Math.random().toString(36).slice(2);
       const script = document.createElement('script');
@@ -64,7 +64,17 @@
     });
   }
 
-  function loadMainApp(apiBase) {
+  function appendScript(src) {
+    return new Promise((resolve, reject) => {
+      const script = document.createElement('script');
+      script.src = src;
+      script.onload = resolve;
+      script.onerror = () => reject(new Error('前端程式載入失敗：' + src));
+      document.body.appendChild(script);
+    });
+  }
+
+  async function loadMainApp(apiBase) {
     window.TRAVEL_PLANNER_CONFIG = {
       apiBase,
       defaultGroup: 'all',
@@ -73,24 +83,16 @@
       storageKey: STORAGE_KEY
     };
 
-    const appScript = document.createElement('script');
-    appScript.src = 'app.js?v=p7-20260904';
-    appScript.onload = () => {
-      const patchScript = document.createElement('script');
-      patchScript.src = 'p4.js?v=p7-20260904';
-      patchScript.onload = () => {
-        const p7Script = document.createElement('script');
-        p7Script.src = 'p7.js?v=p7-20260904';
-        p7Script.onload = () => {
-          const mapScript = document.createElement('script');
-          mapScript.src = 'p7map.js?v=p7-20260904';
-          document.body.appendChild(mapScript);
-        };
-        document.body.appendChild(p7Script);
-      };
-      document.body.appendChild(patchScript);
-    };
-    document.body.appendChild(appScript);
+    try {
+      await appendScript('app.js?v=p7-20260904');
+      await appendScript('p7network.js?v=p77-20260904');
+      await appendScript('p4.js?v=p7-20260904');
+      await appendScript('p7.js?v=p7-20260904');
+      await appendScript('p7map.js?v=p7-20260904');
+    } catch (error) {
+      console.error(error);
+      app.innerHTML = '<div class="card error">前端程式載入失敗，請重新整理頁面。</div>';
+    }
   }
 
   function showSetup() {
