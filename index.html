@@ -4,7 +4,7 @@
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
 <title>旅遊行程規劃</title>
-<link rel="stylesheet" href="styles.css?v=p7-20260903">
+<link rel="stylesheet" href="styles.css?v=p7-20260904">
 </head>
 <body>
 <div class="app-shell">
@@ -24,7 +24,7 @@
 <script>
 (() => {
   const STORAGE_KEY = 'travelPlanner.apiBase.v1';
-  const BUILD_VERSION = 'P7.2 + P7.4 · 2026-09-03';
+  const BUILD_VERSION = 'P7.2 + P7.3 + P7.4 · 2026-09-04';
   const app = document.getElementById('app');
   const pageTitle = document.getElementById('pageTitle');
   const refreshBtn = document.getElementById('refreshBtn');
@@ -74,13 +74,18 @@
     };
 
     const appScript = document.createElement('script');
-    appScript.src = 'app.js?v=p7-20260903';
+    appScript.src = 'app.js?v=p7-20260904';
     appScript.onload = () => {
       const patchScript = document.createElement('script');
-      patchScript.src = 'p4.js?v=p7-20260903';
+      patchScript.src = 'p4.js?v=p7-20260904';
       patchScript.onload = () => {
         const p7Script = document.createElement('script');
-        p7Script.src = 'p7.js?v=p7-20260903';
+        p7Script.src = 'p7.js?v=p7-20260904';
+        p7Script.onload = () => {
+          const mapScript = document.createElement('script');
+          mapScript.src = 'p7map.js?v=p7-20260904';
+          document.body.appendChild(mapScript);
+        };
         document.body.appendChild(p7Script);
       };
       document.body.appendChild(patchScript);
