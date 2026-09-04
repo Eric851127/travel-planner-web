@@ -102,6 +102,10 @@ function p9HandleCallback_(e) {
   }
 }
 
+function p9AuthorizeProject() {
+  return p9AuthorizeProject_();
+}
+
 function p9AuthorizeProject_() {
   const props = p9Properties_();
   const ss = SpreadsheetApp.openById(P9_CONFIG.SPREADSHEET_ID);
