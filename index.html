@@ -8,10 +8,10 @@
 <meta name="apple-mobile-web-app-status-bar-style" content="default">
 <meta name="apple-mobile-web-app-title" content="Travel Planner">
 <title>Travel Planner</title>
-<link rel="manifest" href="manifest.webmanifest?v=p812-20260904">
-<link rel="icon" href="app-icon.svg?v=p812-20260904" type="image/svg+xml">
-<link rel="apple-touch-icon" href="app-icon.svg?v=p812-20260904">
-<link rel="stylesheet" href="styles.css?v=p812-20260904">
+<link rel="manifest" href="manifest.webmanifest?v=p12-20260904">
+<link rel="icon" href="app-icon.svg?v=p12-20260904" type="image/svg+xml">
+<link rel="apple-touch-icon" href="app-icon.svg?v=p12-20260904">
+<link rel="stylesheet" href="styles.css?v=p12-20260904">
 </head>
 <body>
 <div class="app-shell">
@@ -29,7 +29,7 @@
 <script>
 (() => {
   const STORAGE_KEY = 'travelPlanner.apiBase.v1';
-  const BUILD_VERSION = 'P8.1.2 · 2026-09-04';
+  const BUILD_VERSION = 'P12 · 2026-09-04';
   const app = document.getElementById('app');
   const pageTitle = document.getElementById('pageTitle');
   const refreshBtn = document.getElementById('refreshBtn');
@@ -88,13 +88,13 @@
       storageKey: STORAGE_KEY
     };
     try {
-      await appendScript('app.js?v=p812-20260904');
-      await appendScript('p7network.js?v=p812-20260904');
-      await appendScript('p4.js?v=p812-20260904');
-      await appendScript('p7.js?v=p812-20260904');
-      await appendScript('p7map.js?v=p812-20260904');
-      await appendScript('p7today.js?v=p812-20260904');
-      await appendScript('p8.js?v=p812-20260904');
+      await appendScript('app.js?v=p12-20260904');
+      await appendScript('p7network.js?v=p12-20260904');
+      await appendScript('p4.js?v=p12-20260904');
+      await appendScript('p7.js?v=p12-20260904');
+      await appendScript('p7map.js?v=p12-20260904');
+      await appendScript('p7today.js?v=p12-20260904');
+      await appendScript('p8.js?v=p12-20260904');
     } catch (error) {
       console.error(error);
       app.innerHTML = '<div class="card error">前端程式載入失敗，請重新整理頁面。</div>';
