@@ -1,63 +1,29 @@
 <!doctype html>
 <html lang="zh-Hant">
 <head>
-  <meta charset="utf-8">
-  <meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
-  <meta name="theme-color" content="#ffffff">
-  <title>Travel Planner P9.1 Auth PoC</title>
-  <style>
-    :root{font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",sans-serif;color:#161616;background:#f5f5f7}
-    *{box-sizing:border-box}body{margin:0}.shell{max-width:680px;margin:0 auto;padding:24px 16px 48px}.card{background:#fff;border-radius:18px;padding:18px;margin:14px 0;box-shadow:0 1px 8px rgba(0,0,0,.06)}h1{font-size:28px;margin:8px 0 6px}h2{font-size:19px;margin:0 0 10px}.meta{color:#666;font-size:14px;line-height:1.5}.btn{width:100%;min-height:50px;border:0;border-radius:14px;font-size:16px;font-weight:700;padding:12px 16px;margin-top:12px}.primary{background:#111;color:#fff}.secondary{background:#eee;color:#111}.status{white-space:pre-wrap;word-break:break-word;background:#f6f6f6;border-radius:12px;padding:12px;font:13px ui-monospace,SFMono-Regular,Menlo,monospace}.ok{color:#067647}.bad{color:#b42318}input{width:100%;min-height:48px;border:1px solid #ccc;border-radius:12px;padding:11px 12px;font-size:16px;margin-top:8px}
-  </style>
-</head>
-<body>
-  <main class="shell">
-    <div class="meta">P9.1 · isolated proof of concept</div>
-    <h1>Admin Authentication PoC</h1>
-    <div class="meta">這個頁面不會執行任何 Admin CRUD，只驗證 GitHub PWA → Google → Apps Script → Members 的身份與權限鏈。</div>
-
-    <section class="card">
-      <h2>1. Apps Script PoC URL</h2>
-      <div class="meta">請貼上獨立部署的 P9 Apps Script Web App /exec URL。只儲存在目前裝置。</div>
-      <input id="endpoint" type="url" inputmode="url" autocomplete="off" placeholder="https://script.google.com/macros/s/.../exec">
-      <button id="saveEndpoint" class="btn secondary" type="button">儲存 PoC URL</button>
-    </section>
-
-    <section class="card">
-      <h2>2. Transport Probe</h2>
-      <div class="meta">先確認 GitHub Pages → Apps Script GET/POST 的跨來源行為。</div>
-      <button id="getProbe" class="btn secondary" type="button">測試 GET</button>
-      <button id="postProbe" class="btn secondary" type="button">測試 POST</button>
-      <div id="probeStatus" class="status">尚未測試</div>
-    </section>
-
-    <section class="card">
-      <h2>3. Google Authentication</h2>
-      <div class="meta">登入時允許離開 PWA。Google 完成驗證後，Apps Script 會查 Members，再導回本頁。</div>
-      <button id="login" class="btn primary" type="button">使用 Google 驗證 Admin 身分</button>
-      <button id="clear" class="btn secondary" type="button">清除本次測試結果</button>
-      <div id="authStatus" class="status">尚未登入</div>
-    </section>
-  </main>
-<script>
+<meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover"><meta name="theme-color" content="#fff">
+<title>Travel Planner P9.2 Auth Hardening</title>
+<style>:root{font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",sans-serif;color:#161616;background:#f5f5f7}*{box-sizing:border-box}body{margin:0}.shell{max-width:680px;margin:0 auto;padding:24px 16px 48px}.card{background:#fff;border-radius:18px;padding:18px;margin:14px 0;box-shadow:0 1px 8px rgba(0,0,0,.06)}h1{font-size:28px;margin:8px 0 6px}h2{font-size:19px;margin:0 0 10px}.meta{color:#666;font-size:14px;line-height:1.5}.btn{width:100%;min-height:50px;border:0;border-radius:14px;font-size:16px;font-weight:700;padding:12px 16px;margin-top:12px}.primary{background:#111;color:#fff}.secondary{background:#eee;color:#111}.status{white-space:pre-wrap;word-break:break-word;background:#f6f6f6;border-radius:12px;padding:12px;font:13px ui-monospace,SFMono-Regular,Menlo,monospace}.ok{color:#067647}.bad{color:#b42318}input{width:100%;min-height:48px;border:1px solid #ccc;border-radius:12px;padding:11px 12px;font-size:16px;margin-top:8px}</style>
+</head><body><main class="shell">
+<div class="meta">P9.2 · isolated auth security hardening</div><h1>Admin Authentication Test</h1><div class="meta">Google 直接 redirect 回 GitHub Pages；authorization code 只送到 Apps Script 後端交換與驗證。沒有 Admin CRUD。</div>
+<section class="card"><h2>1. Apps Script P9 URL</h2><div class="meta">貼上獨立 P9 Web App /exec URL，只儲存在目前裝置。</div><input id="endpoint" type="url" inputmode="url" autocomplete="off" placeholder="https://script.google.com/macros/s/.../exec"><button id="saveEndpoint" class="btn secondary">儲存 P9 URL</button></section>
+<section class="card"><h2>2. Transport Probe</h2><button id="getProbe" class="btn secondary">測試 GET</button><button id="postProbe" class="btn secondary">測試 POST</button><div id="probeStatus" class="status">尚未測試</div></section>
+<section class="card"><h2>3. Google Authentication</h2><div class="meta">登入時允許離開 PWA。Google 完成後回到本頁，再由 Apps Script 驗證 JWT signature、claims 與 Members 權限。</div><button id="login" class="btn primary">使用 Google 驗證 Admin 身分</button><button id="clear" class="btn secondary">清除本次測試結果</button><div id="authStatus" class="status">尚未登入</div></section>
+</main><script>
 (function(){
-  const KEY='travelPlanner.p9AuthEndpoint.v1';
-  const endpointInput=document.getElementById('endpoint');
-  const probeStatus=document.getElementById('probeStatus');
-  const authStatus=document.getElementById('authStatus');
-  function endpoint(){return String(localStorage.getItem(KEY)||'').trim();}
-  function normalized(value){const u=new URL(String(value||'').trim());if(u.protocol!=='https:'||u.hostname!=='script.google.com'||!/^\/macros\/s\/[^/]+\/exec\/?$/.test(u.pathname))throw new Error('請輸入有效的 Apps Script /exec URL');u.search='';u.hash='';return u.toString().replace(/\/$/,'');}
-  function sameReturnUrl(){return location.origin+location.pathname;}
-  function show(el,value,ok){el.textContent=typeof value==='string'?value:JSON.stringify(value,null,2);el.classList.toggle('ok',ok===true);el.classList.toggle('bad',ok===false);}
-  endpointInput.value=endpoint();
-  document.getElementById('saveEndpoint').onclick=()=>{try{const v=normalized(endpointInput.value);localStorage.setItem(KEY,v);endpointInput.value=v;show(probeStatus,'PoC URL 已儲存。',true);}catch(e){show(probeStatus,e.message,false);}};
-  document.getElementById('getProbe').onclick=async()=>{try{const base=endpoint();if(!base)throw new Error('請先儲存 PoC URL');const r=await fetch(base+'?mode=probe',{redirect:'follow'});show(probeStatus,{status:r.status,url:r.url,body:await r.json()},r.ok);}catch(e){show(probeStatus,'GET failed: '+(e.message||e),false);}};
-  document.getElementById('postProbe').onclick=async()=>{try{const base=endpoint();if(!base)throw new Error('請先儲存 PoC URL');const body=new URLSearchParams({mode:'probe',echo:'github-pwa'});const r=await fetch(base,{method:'POST',body,redirect:'follow'});show(probeStatus,{status:r.status,url:r.url,body:await r.json()},r.ok);}catch(e){show(probeStatus,'POST failed: '+(e.message||e),false);}};
-  document.getElementById('login').onclick=()=>{try{const base=endpoint();if(!base)throw new Error('請先儲存 PoC URL');const url=base+'?mode=start&return_url='+encodeURIComponent(sameReturnUrl());location.href=url;}catch(e){show(authStatus,e.message,false);}};
-  document.getElementById('clear').onclick=()=>{history.replaceState(null,'',location.pathname+location.search);show(authStatus,'尚未登入');};
-  function readResult(){const m=location.hash.match(/(?:^#|&)p9_result=([^&]+)/);if(!m)return;try{let b64=decodeURIComponent(m[1]).replace(/-/g,'+').replace(/_/g,'/');while(b64.length%4)b64+='=';const json=decodeURIComponent(Array.prototype.map.call(atob(b64),c=>'%'+('00'+c.charCodeAt(0).toString(16)).slice(-2)).join(''));const result=JSON.parse(json);show(authStatus,result,!!(result.authenticated&&result.active&&result.admin));}catch(e){show(authStatus,'無法解析驗證結果：'+e.message,false);}}
-  readResult();
+const KEY='travelPlanner.p9AuthEndpoint.v1';
+const endpointInput=document.getElementById('endpoint'),probeStatus=document.getElementById('probeStatus'),authStatus=document.getElementById('authStatus');
+function endpoint(){return String(localStorage.getItem(KEY)||'').trim();}
+function normalized(value){const u=new URL(String(value||'').trim());if(u.protocol!=='https:'||u.hostname!=='script.google.com'||!/^\/macros\/s\/[^/]+\/exec\/?$/.test(u.pathname))throw new Error('請輸入有效的 Apps Script /exec URL');u.search='';u.hash='';return u.toString().replace(/\/$/,'');}
+function callbackUrl(){return location.origin+location.pathname;}
+function show(el,value,ok){el.textContent=typeof value==='string'?value:JSON.stringify(value,null,2);el.classList.toggle('ok',ok===true);el.classList.toggle('bad',ok===false);}
+endpointInput.value=endpoint();
+document.getElementById('saveEndpoint').onclick=()=>{try{const v=normalized(endpointInput.value);localStorage.setItem(KEY,v);endpointInput.value=v;show(probeStatus,'P9 URL 已儲存。',true);}catch(e){show(probeStatus,e.message,false);}};
+document.getElementById('getProbe').onclick=async()=>{try{const base=endpoint();if(!base)throw new Error('請先儲存 P9 URL');const r=await fetch(base+'?mode=probe',{redirect:'follow'});show(probeStatus,{status:r.status,url:r.url,body:await r.json()},r.ok);}catch(e){show(probeStatus,'GET failed: '+(e.message||e),false);}};
+document.getElementById('postProbe').onclick=async()=>{try{const base=endpoint();if(!base)throw new Error('請先儲存 P9 URL');const r=await fetch(base,{method:'POST',body:new URLSearchParams({mode:'probe',echo:'github-pwa'}),redirect:'follow'});show(probeStatus,{status:r.status,url:r.url,body:await r.json()},r.ok);}catch(e){show(probeStatus,'POST failed: '+(e.message||e),false);}};
+document.getElementById('login').onclick=async()=>{try{const base=endpoint();if(!base)throw new Error('請先儲存 P9 URL');show(authStatus,'正在建立 Google 登入請求…');const r=await fetch(base+'?mode=auth_start&return_url='+encodeURIComponent(callbackUrl()),{redirect:'follow'});const data=await r.json();if(!r.ok||!data.ok||!data.auth_url)throw new Error(data.error||'AUTH_START_FAILED');location.href=data.auth_url;}catch(e){show(authStatus,e.message||String(e),false);}};
+document.getElementById('clear').onclick=()=>{history.replaceState(null,'',location.pathname);show(authStatus,'尚未登入');};
+async function finishOAuth(){const q=new URLSearchParams(location.search);const code=q.get('code'),state=q.get('state'),error=q.get('error');if(!code&&!error)return;history.replaceState(null,'',location.pathname);try{const base=endpoint();if(!base)throw new Error('OAuth 已回到 GitHub，但此瀏覽器沒有儲存 Apps Script URL。請重新貼上 URL 後再登入。');show(authStatus,'Google 已回傳，正在由 Apps Script 驗證…');const body=new URLSearchParams({mode:'auth_finish',state:state||'',code:code||'',oauth_error:error||''});const r=await fetch(base,{method:'POST',body,redirect:'follow'});const data=await r.json();show(authStatus,data,!!(data.authenticated&&data.active&&data.admin));}catch(e){show(authStatus,'完成驗證失敗：'+(e.message||e),false);}}
+finishOAuth();
 })();
-</script>
-</body>
-</html>
+</script></body></html>
