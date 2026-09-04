@@ -1,0 +1,96 @@
+<!doctype html>
+<html lang="zh-Hant">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+<meta name="theme-color" content="#fff">
+<title>Travel Planner P9 Auth Diagnostics</title>
+<style>
+:root{font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",sans-serif;color:#161616;background:#f5f5f7}
+*{box-sizing:border-box}body{margin:0}.shell{max-width:680px;margin:0 auto;padding:24px 16px 48px}
+.card{background:#fff;border-radius:18px;padding:18px;margin:14px 0;box-shadow:0 1px 8px rgba(0,0,0,.06)}
+h1{font-size:28px;margin:8px 0 6px}h2{font-size:19px;margin:0 0 10px}.meta{color:#666;font-size:14px;line-height:1.5}
+.btn{width:100%;min-height:50px;border:0;border-radius:14px;font-size:16px;font-weight:700;padding:12px 16px;margin-top:12px}
+.primary{background:#111;color:#fff}.secondary{background:#eee;color:#111}.danger{background:#fbe9e7;color:#8a1c12}
+.status{white-space:pre-wrap;word-break:break-word;background:#f6f6f6;border-radius:12px;padding:12px;font:13px ui-monospace,SFMono-Regular,Menlo,monospace}
+.ok{color:#067647}.bad{color:#b42318}input{width:100%;min-height:48px;border:1px solid #ccc;border-radius:12px;padding:11px 12px;font-size:16px;margin-top:8px}
+</style>
+</head>
+<body>
+<main class="shell">
+<div class="meta">Diagnostics only · P9 authentication foundation</div>
+<h1>Admin Session Diagnostics</h1>
+<div class="meta">工程診斷頁。驗收 Session lifecycle 與 GitHub Pages → Apps Script protected API transport。不可作為正式 Admin 操作頁。</div>
+
+<section class="card">
+<h2>1. Apps Script P9 URL</h2>
+<div class="meta">貼上獨立 P9 Web App /exec URL，只儲存在目前裝置。</div>
+<input id="endpoint" type="url" inputmode="url" autocomplete="off" placeholder="https://script.google.com/macros/s/.../exec">
+<button id="saveEndpoint" class="btn secondary">儲存 P9 URL</button>
+</section>
+
+<section class="card">
+<h2>2. Transport Probe</h2>
+<button id="getProbe" class="btn secondary">測試 GET</button>
+<button id="postProbe" class="btn secondary">測試 POST</button>
+<div id="probeStatus" class="status">尚未測試</div>
+</section>
+
+<section class="card">
+<h2>3. Google Authentication</h2>
+<div class="meta">登入成功後，Apps Script 會簽發 1 小時 Travel Planner session。畫面不顯示 bearer token。</div>
+<button id="login" class="btn primary">使用 Google 建立 Session</button>
+<div id="authStatus" class="status">尚未登入</div>
+</section>
+
+<section class="card">
+<h2>4. Travel Planner Session</h2>
+<div class="meta">Session token 儲存在本裝置 localStorage。每次 restore 都由 backend 驗簽、驗期限，再重新查 Members。</div>
+<button id="restore" class="btn secondary">重新驗證 Session</button>
+<button id="logout" class="btn danger">登出並清除 Session</button>
+<div id="sessionStatus" class="status">尚無 Session</div>
+</section>
+
+<section class="card">
+<h2>5. Protected API PoC</h2>
+<div class="meta">公開 GET/POST probe 驗證跨來源 transport；受保護 API 不把 bearer token 放在 URL，而使用 POST application/x-www-form-urlencoded。Backend 必須驗 session 並重新查 Members。</div>
+<button id="protectedPost" class="btn secondary">測試 Protected POST</button>
+<div id="apiStatus" class="status">尚未測試</div>
+</section>
+</main>
+
+<script>
+(function(){
+  const ENDPOINT_KEY='travelPlanner.p9AuthEndpoint.v1';
+  const SESSION_KEY='travelPlanner.p9Session.v1';
+  const ADMIN_RETURN_KEY='travelPlanner.p11ReturnTo.v1';
+  const endpointInput=document.getElementById('endpoint');
+  const probeStatus=document.getElementById('probeStatus');
+  const authStatus=document.getElementById('authStatus');
+  const sessionStatus=document.getElementById('sessionStatus');
+  const apiStatus=document.getElementById('apiStatus');
+  function endpoint(){return String(localStorage.getItem(ENDPOINT_KEY)||'').trim();}
+  function sessionToken(){return String(localStorage.getItem(SESSION_KEY)||'').trim();}
+  function normalized(value){const u=new URL(String(value||'').trim());if(u.protocol!=='https:'||u.hostname!=='script.google.com'||!/^\/macros\/s\/[^/]+\/exec\/?$/.test(u.pathname))throw new Error('請輸入有效的 Apps Script /exec URL');u.search='';u.hash='';return u.toString().replace(/\/$/,'');}
+  function callbackUrl(){return location.origin+'/travel-planner-web/p9-auth-poc.html';}
+  function show(el,value,ok){el.textContent=typeof value==='string'?value:JSON.stringify(value,null,2);el.classList.toggle('ok',ok===true);el.classList.toggle('bad',ok===false);}
+  function safeAuthView(data){const copy=Object.assign({},data||{});delete copy.session_token;return copy;}
+  function sessionMessage(data){if(!data)return '無法取得 Session 狀態。';if(data.session_valid&&data.admin)return '已登入，Admin Session 有效。';if(data.session_valid&&!data.admin)return '已登入，但目前沒有 Admin 權限。';const code=data.error&&data.error.code;if(code==='SESSION_EXPIRED')return 'Session 已過期，請重新登入。';if(code==='SESSION_REVOKED')return 'Session 已登出，請重新登入。';if(code==='UNAUTHENTICATED')return '尚未登入或 Session 無效，請重新登入。';return 'Session 驗證失敗。';}
+  function apiMessage(data){if(data&&data.ok)return 'Protected API 驗證成功。';const code=data&&data.error&&data.error.code;if(code==='FORBIDDEN')return '已登入，但沒有 Admin 權限。';if(code==='SESSION_EXPIRED')return 'Session 已過期，請重新登入。';if(code==='SESSION_REVOKED'||code==='UNAUTHENTICATED')return 'Session 無效，請重新登入。';return 'Protected API 呼叫失敗。';}
+  function clearOAuthQuery(){if(location.search||location.hash)history.replaceState(null,'',location.pathname);}
+  function adminReturnTarget(){const raw=String(localStorage.getItem(ADMIN_RETURN_KEY)||'').trim();if(!raw)return '';try{const u=new URL(raw,location.origin);if(u.origin!==location.origin)return '';if(!/\/travel-planner-web\/(admin\.html|admin-p11\.html)$/.test(u.pathname))return '';return location.origin+'/travel-planner-web/admin.html';}catch(_){return '';}}
+  function maybeReturnToAdmin(session){const target=adminReturnTarget();if(!target||!session||!session.session_valid||!session.admin)return false;localStorage.removeItem(ADMIN_RETURN_KEY);location.replace(target);return true;}
+  endpointInput.value=endpoint();
+  document.getElementById('saveEndpoint').onclick=()=>{try{const v=normalized(endpointInput.value);localStorage.setItem(ENDPOINT_KEY,v);endpointInput.value=v;show(probeStatus,'P9 URL 已儲存。',true);}catch(e){show(probeStatus,e.message,false);}};
+  document.getElementById('getProbe').onclick=async()=>{try{const base=endpoint();if(!base)throw new Error('請先儲存 P9 URL');const r=await fetch(base+'?mode=probe',{redirect:'follow'});show(probeStatus,{status:r.status,url:r.url,body:await r.json()},r.ok);}catch(e){show(probeStatus,'GET failed: '+(e.message||e),false);}};
+  document.getElementById('postProbe').onclick=async()=>{try{const base=endpoint();if(!base)throw new Error('請先儲存 P9 URL');const r=await fetch(base,{method:'POST',body:new URLSearchParams({mode:'probe',echo:'github-pwa'}),redirect:'follow'});show(probeStatus,{status:r.status,url:r.url,body:await r.json()},r.ok);}catch(e){show(probeStatus,'POST failed: '+(e.message||e),false);}};
+  document.getElementById('login').onclick=async()=>{try{const base=endpoint();if(!base)throw new Error('請先儲存 P9 URL');show(authStatus,'正在建立 Google 登入請求…');const r=await fetch(base+'?mode=auth_start&return_url='+encodeURIComponent(callbackUrl()),{redirect:'follow'});const data=await r.json();if(!r.ok||!data.ok||!data.auth_url)throw new Error(data.error||'AUTH_START_FAILED');location.href=data.auth_url;}catch(e){show(authStatus,e.message||String(e),false);}};
+  async function restoreSession(){const token=sessionToken();if(!token){show(sessionStatus,'尚無 Session');return null;}try{const base=endpoint();if(!base)throw new Error('找不到 Apps Script P9 URL');show(sessionStatus,'正在驗證 Session…');const r=await fetch(base,{method:'POST',body:new URLSearchParams({mode:'session_check',session_token:token}),redirect:'follow'});const data=await r.json();if(!data.session_valid){localStorage.removeItem(SESSION_KEY);show(sessionStatus,sessionMessage(data),false);return data;}show(sessionStatus,{message:sessionMessage(data),authenticated:data.authenticated,session_valid:data.session_valid,email:data.email,sub:data.sub,session_exp:data.session_exp,member_found:data.member_found,active:data.active,admin:data.admin,authorization:data.authorization},!!data.admin);return data;}catch(e){show(sessionStatus,'Session 驗證失敗，請稍後重試。',false);return null;}}
+  document.getElementById('restore').onclick=restoreSession;
+  document.getElementById('logout').onclick=async()=>{const token=sessionToken();try{const base=endpoint();if(base&&token)await fetch(base,{method:'POST',body:new URLSearchParams({mode:'session_logout',session_token:token}),redirect:'follow'});}catch(_){}localStorage.removeItem(SESSION_KEY);localStorage.removeItem(ADMIN_RETURN_KEY);show(authStatus,'已登出。');show(sessionStatus,'Session 已撤銷並從此裝置清除。',true);show(apiStatus,'尚未測試');};
+  document.getElementById('protectedPost').onclick=async()=>{const token=sessionToken();if(!token){show(apiStatus,'尚未登入，無法呼叫 Protected API。',false);return;}try{const base=endpoint();if(!base)throw new Error('NO_ENDPOINT');show(apiStatus,'正在測試 Protected POST…');const r=await fetch(base,{method:'POST',body:new URLSearchParams({mode:'protected_probe',session_token:token}),redirect:'follow'});const data=await r.json();show(apiStatus,{message:apiMessage(data),response:data},!!data.ok);}catch(_){show(apiStatus,'Protected POST transport 失敗。',false);}};
+  (async function init(){const session=await restoreSession();maybeReturnToAdmin(session);})();
+})();
+</script>
+</body>
+</html>
