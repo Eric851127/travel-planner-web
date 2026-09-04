@@ -1,86 +1,69 @@
-# P10 Admin API Layer — isolated install
+# P10 Admin API Layer — historical / diagnostics
 
-Use the same isolated Apps Script project that already passed P9.4/P9.5.
-Do not modify the production Apps Script Admin project yet.
+Status: **P10 COMPLETE**. This document is retained for recovery, audit, and regression diagnostics.
 
-## Add these script files
+The active product no longer uses this page as a normal workflow. Production Admin is served from GitHub Pages and calls the protected Apps Script Admin API.
 
-Create three files in the isolated Apps Script project and paste the matching repository contents:
+## Important safety boundary
+
+`gate_roundtrip` and `p10RunSelfTests()` are **TEST-ONLY** diagnostics.
+
+- `gate_roundtrip` creates temporary `P10-GATE-*` rows across the six Admin entities.
+- It performs create/update/readback/delete and best-effort cleanup.
+- Do not call it from normal Admin UI or user flows.
+- Run it only when intentionally validating the P10 API after backend changes.
+
+## Historical isolated install
+
+P10 was installed into the same isolated Apps Script project that passed P9.4/P9.5. The production legacy Apps Script Admin project was intentionally left untouched during P10.
+
+Files:
 
 - `Router.gs`
 - `Validators.gs`
 - `Gate.gs`
 
-The existing P9 `Code.gs` remains the authentication/session authority.
-
-## One-line P9 route patch
-
-Inside the existing `doPost(e)`, add this line before the final UNKNOWN_ACTION return:
+The P9 `Code.gs` remained the authentication/session authority and routed:
 
 ```js
 if (mode === 'admin_api') return p10AdminApi_(e);
 ```
 
-The resulting routing block should be:
+## Final verified self-test
 
-```js
-function doPost(e) {
-  const mode = String((e && e.parameter && e.parameter.mode) || '').trim();
-  if (mode === 'probe') return p9Json_({ok:true,phase:'P9.4-5-gate',transport:'POST',echo:String((e && e.parameter && e.parameter.echo)||'').slice(0,120),at:new Date().toISOString()});
-  if (mode === 'auth_finish') return p9AuthFinish_(e);
-  if (mode === 'session_check') return p9SessionCheck_(e);
-  if (mode === 'session_logout') return p9SessionLogout_(e);
-  if (mode === 'protected_probe') return p9ProtectedApiProbe_(e, 'POST');
-  if (mode === 'admin_api') return p10AdminApi_(e);
-  return p9Json_({ok:false,error:{code:'UNKNOWN_ACTION',message:'Unknown action.'}});
-}
-```
-
-## Pre-deploy self-test
-
-Run:
-
-```text
-p10RunSelfTests
-```
-
-Expected:
+The final P10 self-test expectation after place-category alignment was:
 
 ```json
 {
   "phase": "P10-admin-api",
   "ok": true,
-  "passed": 8,
-  "total": 8
+  "passed": 9,
+  "total": 9
 }
 ```
 
-Then deploy a **New version** of the existing isolated Web App.
+## Final live gate
 
-## Live gate
-
-Open:
+Diagnostics page:
 
 `https://eric851127.github.io/travel-planner-web/p10-admin-api.html`
 
-The page reuses the P9 session stored on the same GitHub Pages origin.
+The final CRUD roundtrip passed all six entities and completed cleanup successfully.
 
-Run in order:
+## Current architecture
 
-1. Check existing Session
-2. Bootstrap
-3. CRUD Roundtrip
+Production path:
 
-The CRUD gate creates temporary `P10-GATE-*` records for all six Admin entity types, updates and reads them back, then deletes them in dependency-safe order. On failure it attempts best-effort cleanup of only the IDs created by that gate run.
+```text
+GitHub Pages Traveler / Admin UI
+        ↓
+Apps Script protected Admin API
+        ↓
+Google Sheets
+```
 
-## P10 boundaries
+Identity is established through Google OAuth/OpenID Connect. Authorization is re-derived from `Members.active` and `Members.admin_access` on protected session checks.
 
-P10 does not modify:
+## Historical boundaries
 
-- production `apps-script/admin/Code.gs`
-- `p8.js`
-- Traveler UI
-- production Edit button behavior
-- legacy Apps Script Admin UI
-
-P11 remains blocked until P10 live gate passes.
+P10 intentionally did not modify the production legacy Apps Script Admin UI. That legacy UI is now deprecated but retained as a fallback during post-migration stabilization.
