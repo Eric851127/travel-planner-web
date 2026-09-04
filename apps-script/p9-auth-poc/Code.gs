@@ -17,7 +17,6 @@ function doGet(e) {
   if (mode === 'start') return p9StartAuth_(e);
   if (mode === 'probe') return p9Json_({ ok: true, phase: 'P9.1', transport: 'GET', at: new Date().toISOString() });
   if (mode === 'config') return p9PublicConfig_();
-  if (e && e.parameter && (e.parameter.code || e.parameter.error)) return p9HandleCallback_(e);
   return HtmlService.createHtmlOutput(
     '<!doctype html><meta name="viewport" content="width=device-width,initial-scale=1">' +
     '<title>Travel Planner P9.1</title><body style="font:16px system-ui;padding:24px">' +
@@ -43,12 +42,17 @@ function p9StartAuth_(e) {
   const props = p9Properties_();
   const requestedReturn = String((e && e.parameter && e.parameter.return_url) || '').trim();
   const returnUrl = p9ValidateReturnUrl_(requestedReturn, props.returnUrl);
-  const state = p9RandomToken_();
-  CacheService.getScriptCache().put('p9state:' + state, JSON.stringify({ returnUrl: returnUrl }), P9_CONFIG.STATE_TTL_SECONDS);
+  const redirectUri = p9CallbackUri_();
+
+  const state = ScriptApp.newStateToken()
+    .withMethod('p9OAuthCallback_')
+    .withArgument('returnUrl', returnUrl)
+    .withTimeout(P9_CONFIG.STATE_TTL_SECONDS)
+    .createToken();
 
   const authUrl = P9_CONFIG.AUTH_URL + '?' + p9Query_({
     client_id: props.clientId,
-    redirect_uri: props.redirectUri,
+    redirect_uri: redirectUri,
     response_type: 'code',
     scope: 'openid email profile',
     state: state,
@@ -59,24 +63,20 @@ function p9StartAuth_(e) {
   return p9RedirectHtml_(authUrl, 'Opening Google sign-in…');
 }
 
-function p9HandleCallback_(e) {
+/**
+ * Apps Script callback invoked through /usercallback by the encrypted StateToken.
+ */
+function p9OAuthCallback_(e) {
   const props = p9Properties_();
-  const state = String(e.parameter.state || '').trim();
-  const cache = CacheService.getScriptCache();
-  const cached = state ? cache.get('p9state:' + state) : null;
-  if (!cached) return p9ResultPage_(props.returnUrl, { authenticated: false, active: false, admin: false, error: 'INVALID_OR_EXPIRED_STATE' });
-  cache.remove('p9state:' + state);
-
-  let stateData;
-  try { stateData = JSON.parse(cached); } catch (_) { stateData = { returnUrl: props.returnUrl }; }
-  const returnUrl = p9ValidateReturnUrl_(stateData.returnUrl, props.returnUrl);
-  if (e.parameter.error) {
+  const returnUrl = p9ValidateReturnUrl_(String((e && e.parameter && e.parameter.returnUrl) || ''), props.returnUrl);
+  if (e && e.parameter && e.parameter.error) {
     return p9ResultPage_(returnUrl, { authenticated: false, active: false, admin: false, error: String(e.parameter.error) });
   }
 
   try {
-    const code = String(e.parameter.code || '').trim();
+    const code = String((e && e.parameter && e.parameter.code) || '').trim();
     if (!code) throw new Error('MISSING_AUTHORIZATION_CODE');
+    const redirectUri = p9CallbackUri_();
     const tokenResponse = UrlFetchApp.fetch(P9_CONFIG.TOKEN_URL, {
       method: 'post',
       contentType: 'application/x-www-form-urlencoded',
@@ -84,16 +84,19 @@ function p9HandleCallback_(e) {
         code: code,
         client_id: props.clientId,
         client_secret: props.clientSecret,
-        redirect_uri: props.redirectUri,
+        redirect_uri: redirectUri,
         grant_type: 'authorization_code'
       },
       muteHttpExceptions: true
     });
-    if (tokenResponse.getResponseCode() !== 200) throw new Error('TOKEN_EXCHANGE_FAILED');
+    if (tokenResponse.getResponseCode() !== 200) {
+      console.error('P9 token exchange body: ' + tokenResponse.getContentText());
+      throw new Error('TOKEN_EXCHANGE_FAILED');
+    }
     const tokenBody = JSON.parse(tokenResponse.getContentText());
     if (!tokenBody.id_token) throw new Error('MISSING_ID_TOKEN');
 
-    // P9.1 only: tokeninfo is used to prove the chain. Production will replace this with local JWT verification.
+    // P9.1 only: tokeninfo proves the identity chain. Production will use local JWT verification.
     const claimsResponse = UrlFetchApp.fetch(P9_CONFIG.TOKENINFO_URL + '?id_token=' + encodeURIComponent(tokenBody.id_token), { muteHttpExceptions: true });
     if (claimsResponse.getResponseCode() !== 200) throw new Error('ID_TOKEN_INVALID');
     const claims = JSON.parse(claimsResponse.getContentText());
@@ -121,6 +124,12 @@ function p9HandleCallback_(e) {
       error: String(error && error.message || error || 'AUTH_FAILED')
     });
   }
+}
+
+function p9CallbackUri_() {
+  const execUrl = String(ScriptApp.getService().getUrl() || '').trim();
+  if (!/\/exec\/?$/.test(execUrl)) throw new Error('WEB_APP_EXEC_URL_UNAVAILABLE');
+  return execUrl.replace(/\/exec\/?$/, '/usercallback');
 }
 
 function p9ValidateClaims_(claims, expectedClientId) {
@@ -156,7 +165,6 @@ function p9Properties_() {
   const result = {
     clientId: String(p.getProperty('P9_OAUTH_CLIENT_ID') || '').trim(),
     clientSecret: String(p.getProperty('P9_OAUTH_CLIENT_SECRET') || '').trim(),
-    redirectUri: String(p.getProperty('P9_REDIRECT_URI') || '').trim(),
     returnUrl: String(p.getProperty('P9_ALLOWED_RETURN_URL') || '').trim()
   };
   Object.keys(result).forEach(function (key) {
@@ -167,7 +175,7 @@ function p9Properties_() {
 
 function p9PublicConfig_() {
   const props = p9Properties_();
-  return p9Json_({ ok: true, redirect_uri: props.redirectUri, allowed_return_url: props.returnUrl });
+  return p9Json_({ ok: true, redirect_uri: p9CallbackUri_(), allowed_return_url: props.returnUrl });
 }
 
 function p9ValidateReturnUrl_(requested, allowed) {
@@ -203,10 +211,6 @@ function p9Query_(params) {
   return Object.keys(params).map(function (key) {
     return encodeURIComponent(key) + '=' + encodeURIComponent(String(params[key]));
   }).join('&');
-}
-
-function p9RandomToken_() {
-  return Utilities.getUuid().replace(/-/g, '') + Utilities.getUuid().replace(/-/g, '');
 }
 
 function p9Truthy_(value) {
