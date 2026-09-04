@@ -4,7 +4,7 @@
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
 <title>旅遊行程規劃</title>
-<link rel="stylesheet" href="styles.css?v=p7-20260904">
+<link rel="stylesheet" href="styles.css?v=p78-20260904">
 </head>
 <body>
 <div class="app-shell">
@@ -15,16 +15,14 @@
 <main id="app" class="content"></main>
 <nav class="bottom-nav">
 <button class="nav-item active" data-view="today"><span>●</span><small>今日</small></button>
-<button class="nav-item" data-view="trip"><span>≡</span><small>行程</small></button>
 <button class="nav-item" data-view="bookings"><span>□</span><small>預訂</small></button>
-<button class="nav-item" data-view="map"><span>⌖</span><small>地圖</small></button>
 <button class="nav-item" data-view="more"><span>•••</span><small>更多</small></button>
 </nav>
 </div>
 <script>
 (() => {
   const STORAGE_KEY = 'travelPlanner.apiBase.v1';
-  const BUILD_VERSION = 'P7.7 · 2026-09-04';
+  const BUILD_VERSION = 'P7.8 · 2026-09-04';
   const app = document.getElementById('app');
   const pageTitle = document.getElementById('pageTitle');
   const refreshBtn = document.getElementById('refreshBtn');
@@ -77,18 +75,19 @@
   async function loadMainApp(apiBase) {
     window.TRAVEL_PLANNER_CONFIG = {
       apiBase,
-      defaultGroup: 'all',
+      defaultGroup: 'ours',
       defaultDate: null,
       buildVersion: BUILD_VERSION,
       storageKey: STORAGE_KEY
     };
 
     try {
-      await appendScript('app.js?v=p7-20260904');
-      await appendScript('p7network.js?v=p77-20260904');
-      await appendScript('p4.js?v=p7-20260904');
-      await appendScript('p7.js?v=p7-20260904');
-      await appendScript('p7map.js?v=p7-20260904');
+      await appendScript('app.js?v=p78-20260904');
+      await appendScript('p7network.js?v=p78-20260904');
+      await appendScript('p4.js?v=p78-20260904');
+      await appendScript('p7.js?v=p78-20260904');
+      await appendScript('p7map.js?v=p78-20260904');
+      await appendScript('p7today.js?v=p78-20260904');
     } catch (error) {
       console.error(error);
       app.innerHTML = '<div class="card error">前端程式載入失敗，請重新整理頁面。</div>';
