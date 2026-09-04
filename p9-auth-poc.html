@@ -63,6 +63,7 @@ h1{font-size:28px;margin:8px 0 6px}h2{font-size:19px;margin:0 0 10px}.meta{color
 (function(){
   const ENDPOINT_KEY='travelPlanner.p9AuthEndpoint.v1';
   const SESSION_KEY='travelPlanner.p9Session.v1';
+  const ADMIN_RETURN_KEY='travelPlanner.p11ReturnTo.v1';
 
   const endpointInput=document.getElementById('endpoint');
   const probeStatus=document.getElementById('probeStatus');
@@ -113,6 +114,23 @@ h1{font-size:28px;margin:8px 0 6px}h2{font-size:19px;margin:0 0 10px}.meta{color
     if(location.search||location.hash){
       history.replaceState(null,'',location.pathname);
     }
+  }
+  function adminReturnTarget(){
+    const raw=String(localStorage.getItem(ADMIN_RETURN_KEY)||'').trim();
+    if(!raw)return '';
+    try{
+      const u=new URL(raw,location.origin);
+      if(u.origin!==location.origin)return '';
+      if(!/\/travel-planner-web\/(admin\.html|admin-p11\.html)$/.test(u.pathname))return '';
+      return location.origin+'/travel-planner-web/admin.html';
+    }catch(_){return '';}
+  }
+  function maybeReturnToAdmin(session){
+    const target=adminReturnTarget();
+    if(!target||!session||!session.session_valid||!session.admin)return false;
+    localStorage.removeItem(ADMIN_RETURN_KEY);
+    location.replace(target);
+    return true;
   }
 
   endpointInput.value=endpoint();
@@ -207,6 +225,7 @@ h1{font-size:28px;margin:8px 0 6px}h2{font-size:19px;margin:0 0 10px}.meta{color
       }
     }catch(_){}
     localStorage.removeItem(SESSION_KEY);
+    localStorage.removeItem(ADMIN_RETURN_KEY);
     show(authStatus,'已登出。');
     show(sessionStatus,'Session 已撤銷並從此裝置清除。',true);
     show(apiStatus,'尚未測試');
@@ -273,7 +292,8 @@ h1{font-size:28px;margin:8px 0 6px}h2{font-size:19px;margin:0 0 10px}.meta{color
       );
 
       if(data.session_token){
-        await restoreSession();
+        const session=await restoreSession();
+        if(maybeReturnToAdmin(session))return true;
       }
 
     }catch(e){
@@ -286,7 +306,8 @@ h1{font-size:28px;margin:8px 0 6px}h2{font-size:19px;margin:0 0 10px}.meta{color
   (async function init(){
     const handled=await finishOAuth();
     if(!handled){
-      await restoreSession();
+      const session=await restoreSession();
+      maybeReturnToAdmin(session);
     }
   })();
 })();
