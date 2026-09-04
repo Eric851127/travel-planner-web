@@ -1,0 +1,31 @@
+<!doctype html>
+<html lang="zh-Hant">
+<head>
+<meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover"><meta name="theme-color" content="#fff">
+<title>Travel Planner P10 Admin API Gate</title>
+<style>
+:root{font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",sans-serif;color:#161616;background:#f5f5f7}*{box-sizing:border-box}body{margin:0}.shell{max-width:760px;margin:0 auto;padding:24px 16px 48px}.card{background:#fff;border-radius:18px;padding:18px;margin:14px 0;box-shadow:0 1px 8px rgba(0,0,0,.06)}h1{font-size:28px;margin:8px 0 6px}h2{font-size:19px;margin:0 0 10px}.meta{color:#666;font-size:14px;line-height:1.5}.btn{width:100%;min-height:50px;border:0;border-radius:14px;font-size:16px;font-weight:700;padding:12px 16px;margin-top:12px}.primary{background:#111;color:#fff}.secondary{background:#eee;color:#111}.danger{background:#fbe9e7;color:#8a1c12}.status{white-space:pre-wrap;word-break:break-word;background:#f6f6f6;border-radius:12px;padding:12px;font:13px ui-monospace,SFMono-Regular,Menlo,monospace}.ok{color:#067647}.bad{color:#b42318}input{width:100%;min-height:48px;border:1px solid #ccc;border-radius:12px;padding:11px 12px;font-size:16px;margin-top:8px}
+</style>
+</head><body><main class="shell">
+<div class="meta">P10 · Admin API Layer</div><h1>Admin API Gate</h1><div class="meta">使用 P9 已建立的 Travel Planner session，測試 bootstrap 與完整六類 CRUD roundtrip。這個頁面不會切換 production Admin。</div>
+<section class="card"><h2>1. P10 Apps Script URL</h2><div class="meta">貼上同一個 P9/P10 isolated Apps Script Web App /exec URL。</div><input id="endpoint" type="url" inputmode="url" autocomplete="off" placeholder="https://script.google.com/macros/s/.../exec"><button id="saveEndpoint" class="btn secondary">儲存 P10 URL</button><div id="endpointStatus" class="status">尚未設定</div></section>
+<section class="card"><h2>2. Session</h2><div class="meta">直接讀取 P9 已存於本 GitHub Pages origin 的 session，不顯示 token。</div><button id="checkSession" class="btn secondary">檢查現有 Session</button><div id="sessionStatus" class="status">尚未檢查</div></section>
+<section class="card"><h2>3. Bootstrap</h2><div class="meta">Protected Admin API read gate。成功時會回六類資料筆數、current_admin、enums，以及最小化 Members。</div><button id="bootstrap" class="btn primary">測試 Bootstrap</button><div id="bootstrapStatus" class="status">尚未測試</div></section>
+<section class="card"><h2>4. CRUD Roundtrip</h2><div class="meta">會暫時建立 P10-GATE-* 測試資料，依序 create/update/readback/delete，並嘗試自動清理。</div><button id="crudGate" class="btn danger">執行完整 CRUD Gate</button><div id="crudStatus" class="status">尚未執行</div></section>
+</main><script>
+(function(){
+const ENDPOINT_KEY='travelPlanner.p10AdminEndpoint.v1';
+const SESSION_KEY='travelPlanner.p9Session.v1';
+const endpointInput=document.getElementById('endpoint'),endpointStatus=document.getElementById('endpointStatus'),sessionStatus=document.getElementById('sessionStatus'),bootstrapStatus=document.getElementById('bootstrapStatus'),crudStatus=document.getElementById('crudStatus');
+function show(el,value,ok){el.textContent=typeof value==='string'?value:JSON.stringify(value,null,2);el.classList.toggle('ok',ok===true);el.classList.toggle('bad',ok===false);}
+function endpoint(){return String(localStorage.getItem(ENDPOINT_KEY)||localStorage.getItem('travelPlanner.p9AuthEndpoint.v1')||'').trim();}
+function token(){return String(localStorage.getItem(SESSION_KEY)||'').trim();}
+function normalized(value){const u=new URL(String(value||'').trim());if(u.protocol!=='https:'||u.hostname!=='script.google.com'||!/^\/macros\/s\/[^/]+\/exec\/?$/.test(u.pathname))throw new Error('請輸入有效的 Apps Script /exec URL');u.search='';u.hash='';return u.toString().replace(/\/$/,'');}
+async function api(action,extra){const base=endpoint(),session=token();if(!base)throw new Error('請先設定 P10 URL');if(!session)throw new Error('找不到 P9 Session，請先回 P9 測試頁登入。');const body=new URLSearchParams(Object.assign({mode:'admin_api',action:action,session_token:session},extra||{}));const r=await fetch(base,{method:'POST',body,redirect:'follow'});return await r.json();}
+endpointInput.value=endpoint();if(endpoint())show(endpointStatus,'已載入 Apps Script URL。',true);
+document.getElementById('saveEndpoint').onclick=()=>{try{const v=normalized(endpointInput.value);localStorage.setItem(ENDPOINT_KEY,v);endpointInput.value=v;show(endpointStatus,'P10 URL 已儲存。',true);}catch(e){show(endpointStatus,e.message,false);}};
+document.getElementById('checkSession').onclick=()=>{const t=token();show(sessionStatus,t?'已找到 P9 Session，可進行 P10 測試。':'找不到 P9 Session，請先在 P9 頁面登入。',!!t);};
+document.getElementById('bootstrap').onclick=async()=>{try{show(bootstrapStatus,'正在讀取 Bootstrap…');const data=await api('bootstrap');if(!data.ok){show(bootstrapStatus,data,false);return;}const d=data.data||{};show(bootstrapStatus,{ok:true,phase:d.phase,current_admin:d.current_admin,counts:{itinerary:(d.itinerary||[]).length,reservations:(d.reservations||[]).length,hotels:(d.hotels||[]).length,flights:(d.flights||[]).length,transport:(d.transport||[]).length,places:(d.places||[]).length,members:(d.members||[]).length},enums:d.enums},true);}catch(e){show(bootstrapStatus,e.message||String(e),false);}};
+document.getElementById('crudGate').onclick=async()=>{try{show(crudStatus,'正在執行六類 CRUD roundtrip…');const data=await api('gate_roundtrip');show(crudStatus,data,!!data.ok);}catch(e){show(crudStatus,e.message||String(e),false);}};
+})();
+</script></body></html>
