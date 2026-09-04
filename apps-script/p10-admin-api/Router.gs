@@ -5,7 +5,8 @@ const P10_CONFIG = {
   CERTAINTIES: ['confirmed','tentative','optional'],
   RESERVATION_CATEGORIES: ['hotel','flight','train','restaurant','activity','ticket','rental_car','other'],
   RESERVATION_STATUSES: ['not_required','planned','need_booking','booked','paid','cancelled'],
-  TRANSPORT_TYPES: ['train','bus','ferry','rental_car','airport_transfer','other']
+  TRANSPORT_TYPES: ['train','bus','ferry','rental_car','airport_transfer','other'],
+  PLACE_CATEGORIES: ['station','airport','hotel','restaurant','attraction','shop','other']
 };
 
 /**
@@ -64,7 +65,8 @@ function p10GetAdminBootstrapAuthorized_(admin) {
       certainty:P10_CONFIG.CERTAINTIES,
       reservation_category:P10_CONFIG.RESERVATION_CATEGORIES,
       reservation_status:P10_CONFIG.RESERVATION_STATUSES,
-      transport_type:P10_CONFIG.TRANSPORT_TYPES
+      transport_type:P10_CONFIG.TRANSPORT_TYPES,
+      place_category:P10_CONFIG.PLACE_CATEGORIES
     }
   };
 }
