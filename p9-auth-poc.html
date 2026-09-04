@@ -35,6 +35,7 @@ h1{font-size:28px;line-height:1.25;margin:0 0 8px}.lead{color:#666;font-size:16p
 <script>
 (function(){'use strict';
   const ENDPOINT_KEY='travelPlanner.p9AuthEndpoint.v1';
+  const PRODUCTION_ENDPOINT='https://script.google.com/macros/s/AKfycbzpBT-CqGtHiFtY9mb_p_diNNs46GC4h7ks-gKCMKHG-bSE6xWE_Q5Vc0eAkET4kpsS/exec';
   const SESSION_KEY='travelPlanner.p9Session.v1';
   const RETURN_KEY='travelPlanner.p11ReturnTo.v1';
   const ADMIN_PATH='/travel-planner-web/admin.html';
@@ -46,121 +47,31 @@ h1{font-size:28px;line-height:1.25;margin:0 0 8px}.lead{color:#666;font-size:16p
   const travelerBtn=document.getElementById('travelerBtn');
   const status=document.getElementById('status');
 
-  function endpoint(){return String(localStorage.getItem(ENDPOINT_KEY)||'').trim();}
+  function endpoint(){return String(localStorage.getItem(ENDPOINT_KEY)||'').trim()||PRODUCTION_ENDPOINT;}
   function token(){return String(localStorage.getItem(SESSION_KEY)||'').trim();}
   function callbackUrl(){return location.origin+location.pathname;}
   function travelerUrl(){return location.origin+TRAVELER_PATH;}
   function defaultAdminUrl(){return location.origin+ADMIN_PATH;}
   function clearOAuthQuery(){if(location.search||location.hash)history.replaceState(null,'',location.pathname);}
-  function setBusy(message){
-    title.textContent='正在完成登入';
-    lead.textContent='正在確認你的 Google 帳戶與管理權限。';
-    loginBtn.hidden=true;
-    travelerBtn.hidden=true;
-    status.className='status show';
-    status.innerHTML='<span class="spinner" aria-hidden="true"></span>'+message;
-  }
-  function showIdle(){
-    title.textContent='行程管理';
-    lead.textContent='使用 Google 帳戶登入，以管理旅程內容。';
-    loginBtn.hidden=false;loginBtn.disabled=false;loginBtn.textContent='使用 Google 帳戶登入';travelerBtn.hidden=false;
-    status.className='status';status.textContent='';
-  }
-  function showError(message,forbidden){
-    title.textContent=forbidden?'沒有管理權限':'登入未完成';
-    lead.textContent=forbidden?'這個 Google 帳戶目前無法使用行程管理功能。':'請重新登入，或返回旅客端稍後再試。';
-    loginBtn.hidden=false;loginBtn.disabled=false;loginBtn.textContent=forbidden?'使用其他 Google 帳戶':'重新登入';
-    travelerBtn.hidden=false;
-    status.className='status show error';status.textContent=message;
-  }
-  function errorCode(data){
-    if(!data)return '';
-    if(data.error&&typeof data.error==='object')return String(data.error.code||'');
-    return String(data.code||'');
-  }
-  function errorMessage(data,fallback){
-    if(data&&data.error&&typeof data.error==='object'&&data.error.message)return String(data.error.message);
-    if(data&&typeof data.error==='string'&&data.error)return data.error;
-    if(data&&data.message)return String(data.message);
-    return fallback;
-  }
-  function safeAdminTarget(){
-    const raw=String(localStorage.getItem(RETURN_KEY)||'').trim();
-    if(raw){
-      try{
-        const u=new URL(raw,location.origin);
-        if(u.origin===location.origin&&/^\/travel-planner-web\/(admin\.html|admin-p11\.html)$/.test(u.pathname))return defaultAdminUrl();
-      }catch(_){}
-    }
-    return defaultAdminUrl();
-  }
+  function setBusy(message){title.textContent='正在完成登入';lead.textContent='正在確認你的 Google 帳戶與管理權限。';loginBtn.hidden=true;travelerBtn.hidden=true;status.className='status show';status.innerHTML='<span class="spinner" aria-hidden="true"></span>'+message;}
+  function showIdle(){title.textContent='行程管理';lead.textContent='使用 Google 帳戶登入，以管理旅程內容。';loginBtn.hidden=false;loginBtn.disabled=false;loginBtn.textContent='使用 Google 帳戶登入';travelerBtn.hidden=false;status.className='status';status.textContent='';}
+  function showError(message,forbidden){title.textContent=forbidden?'沒有管理權限':'登入未完成';lead.textContent=forbidden?'這個 Google 帳戶目前無法使用行程管理功能。':'請重新登入，或返回旅客端稍後再試。';loginBtn.hidden=false;loginBtn.disabled=false;loginBtn.textContent=forbidden?'使用其他 Google 帳戶':'重新登入';travelerBtn.hidden=false;status.className='status show error';status.textContent=message;}
+  function errorCode(data){if(!data)return '';if(data.error&&typeof data.error==='object')return String(data.error.code||'');return String(data.code||'');}
+  function errorMessage(data,fallback){if(data&&data.error&&typeof data.error==='object'&&data.error.message)return String(data.error.message);if(data&&typeof data.error==='string'&&data.error)return data.error;if(data&&data.message)return String(data.message);return fallback;}
+  function safeAdminTarget(){const raw=String(localStorage.getItem(RETURN_KEY)||'').trim();if(raw){try{const u=new URL(raw,location.origin);if(u.origin===location.origin&&/^\/travel-planner-web\/(admin\.html|admin-p11\.html)$/.test(u.pathname))return defaultAdminUrl();}catch(_){}}return defaultAdminUrl();}
   function goAdmin(){const target=safeAdminTarget();localStorage.removeItem(RETURN_KEY);location.replace(target);}
   function clearSession(){localStorage.removeItem(SESSION_KEY);}
 
-  async function sessionCheck(){
-    const base=endpoint(),sessionToken=token();
-    if(!base||!sessionToken)return null;
-    const r=await fetch(base,{method:'POST',body:new URLSearchParams({mode:'session_check',session_token:sessionToken}),redirect:'follow'});
-    const data=await r.json();
-    if(!data.session_valid)clearSession();
-    return data;
-  }
+  async function sessionCheck(){const base=endpoint(),sessionToken=token();if(!base||!sessionToken)return null;const r=await fetch(base,{method:'POST',body:new URLSearchParams({mode:'session_check',session_token:sessionToken}),redirect:'follow'});const data=await r.json();if(!data.session_valid)clearSession();return data;}
 
-  async function startLogin(){
-    const base=endpoint();
-    if(!base){showError('目前無法連線到管理服務。請返回旅客端後再試一次。',false);return;}
-    loginBtn.disabled=true;
-    setBusy('正在前往 Google 登入…');
-    try{
-      const r=await fetch(base+'?mode=auth_start&return_url='+encodeURIComponent(callbackUrl()),{redirect:'follow'});
-      const data=await r.json();
-      if(!r.ok||!data.ok||!data.auth_url)throw new Error(errorMessage(data,'無法建立 Google 登入請求。'));
-      location.href=data.auth_url;
-    }catch(e){showError(e&&e.message?e.message:'無法建立 Google 登入請求。',false);}
-  }
+  async function startLogin(){const base=endpoint();loginBtn.disabled=true;setBusy('正在前往 Google 登入…');try{const r=await fetch(base+'?mode=auth_start&return_url='+encodeURIComponent(callbackUrl()),{redirect:'follow'});const data=await r.json();if(!r.ok||!data.ok||!data.auth_url)throw new Error(errorMessage(data,'無法建立 Google 登入請求。'));location.href=data.auth_url;}catch(e){showError(e&&e.message?e.message:'無法建立 Google 登入請求。',false);}}
 
-  async function finishOAuth(){
-    const q=new URLSearchParams(location.search);
-    const code=q.get('code'),state=q.get('state'),oauthError=q.get('error');
-    if(!code&&!oauthError)return false;
-    clearOAuthQuery();
-    const base=endpoint();
-    if(!base){showError('登入已返回，但目前無法連線到管理服務。',false);return true;}
-    setBusy('Google 已驗證，正在建立管理工作階段…');
-    try{
-      const r=await fetch(base,{method:'POST',body:new URLSearchParams({mode:'auth_finish',state:state||'',code:code||'',oauth_error:oauthError||''}),redirect:'follow'});
-      const data=await r.json();
-      if(data.session_token)localStorage.setItem(SESSION_KEY,data.session_token);
-      if(!data.session_token){
-        const codeValue=errorCode(data);
-        showError(errorMessage(data,oauthError?'Google 登入已取消或未完成。':'無法完成登入。'),codeValue==='FORBIDDEN');
-        return true;
-      }
-      setBusy('正在確認管理權限…');
-      const session=await sessionCheck();
-      if(session&&session.session_valid&&session.admin){goAdmin();return true;}
-      const codeValue=errorCode(session);
-      showError(errorMessage(session,'此帳戶目前無法使用行程管理功能。'),!!(session&&session.session_valid&&!session.admin)||codeValue==='FORBIDDEN');
-    }catch(e){showError('完成登入時發生連線錯誤，請重新登入。',false);}
-    return true;
-  }
+  async function finishOAuth(){const q=new URLSearchParams(location.search);const code=q.get('code'),state=q.get('state'),oauthError=q.get('error');if(!code&&!oauthError)return false;clearOAuthQuery();const base=endpoint();setBusy('Google 已驗證，正在建立管理工作階段…');try{const r=await fetch(base,{method:'POST',body:new URLSearchParams({mode:'auth_finish',state:state||'',code:code||'',oauth_error:oauthError||''}),redirect:'follow'});const data=await r.json();if(data.session_token)localStorage.setItem(SESSION_KEY,data.session_token);if(!data.session_token){const codeValue=errorCode(data);showError(errorMessage(data,oauthError?'Google 登入已取消或未完成。':'無法完成登入。'),codeValue==='FORBIDDEN');return true;}setBusy('正在確認管理權限…');const session=await sessionCheck();if(session&&session.session_valid&&session.admin){goAdmin();return true;}const codeValue=errorCode(session);showError(errorMessage(session,'此帳戶目前無法使用行程管理功能。'),!!(session&&session.session_valid&&!session.admin)||codeValue==='FORBIDDEN');}catch(e){showError('完成登入時發生連線錯誤，請重新登入。',false);}return true;}
 
   loginBtn.addEventListener('click',startLogin);
   travelerBtn.addEventListener('click',function(){location.href=travelerUrl();});
 
-  (async function init(){
-    const handled=await finishOAuth();
-    if(handled)return;
-    if(!endpoint()){showError('目前無法連線到管理服務。請返回旅客端後再試一次。',false);return;}
-    if(!token()){showIdle();return;}
-    setBusy('正在確認目前的登入狀態…');
-    try{
-      const session=await sessionCheck();
-      if(session&&session.session_valid&&session.admin){goAdmin();return;}
-      if(session&&session.session_valid&&!session.admin){showError('此 Google 帳戶目前沒有 Admin 管理權限。',true);return;}
-      showIdle();
-    }catch(_){showError('目前無法確認登入狀態，請稍後再試。',false);}
-  })();
+  (async function init(){const handled=await finishOAuth();if(handled)return;if(!token()){showIdle();return;}setBusy('正在確認目前的登入狀態…');try{const session=await sessionCheck();if(session&&session.session_valid&&session.admin){goAdmin();return;}if(session&&session.session_valid&&!session.admin){showError('此 Google 帳戶目前沒有 Admin 管理權限。',true);return;}showIdle();}catch(_){showError('目前無法確認登入狀態，請稍後再試。',false);}})();
 })();
 </script>
 </body>
