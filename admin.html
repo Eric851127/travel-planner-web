@@ -20,13 +20,17 @@
   }catch(_){}
 
   var marker='<div class="top-actions"><button class="btn secondary" id="logoutBtn" hidden>登出</button>';
-  var replacement='<div class="top-actions"><button class="btn secondary" id="travelerBtn" type="button" onclick="location.href=\'./\'">查看旅程</button><button class="btn secondary" id="logoutBtn" hidden>登出</button>';
+  var replacement='<div class="top-actions"><button class="btn secondary" id="travelerBtn" type="button" hidden onclick="location.href=\'./\'">查看旅程</button><button class="btn secondary" id="logoutBtn" hidden>登出</button>';
+  var showAuthMarker="$('adminPanel').hidden=true;$('addBtn').hidden=true;$('logoutBtn').hidden=!token();";
+  var showAuthReplacement="$('adminPanel').hidden=true;$('addBtn').hidden=true;$('travelerBtn').hidden=true;$('logoutBtn').hidden=!token();";
+  var loadMarker="$('authPanel').innerHTML='';$('adminPanel').hidden=false;$('addBtn').hidden=false;$('logoutBtn').hidden=false;";
+  var loadReplacement="$('authPanel').innerHTML='';$('adminPanel').hidden=false;$('addBtn').hidden=false;$('travelerBtn').hidden=false;$('logoutBtn').hidden=false;";
 
   fetch('admin-p11.html',{cache:'no-store'})
     .then(function(response){if(!response.ok)throw new Error('ADMIN_LOAD_FAILED');return response.text();})
     .then(function(html){
-      if(html.indexOf(marker)<0)throw new Error('ADMIN_HEADER_MARKER_NOT_FOUND');
-      html=html.replace(marker,replacement);
+      if(html.indexOf(marker)<0||html.indexOf(showAuthMarker)<0||html.indexOf(loadMarker)<0)throw new Error('ADMIN_PATCH_MARKER_NOT_FOUND');
+      html=html.replace(marker,replacement).replace(showAuthMarker,showAuthReplacement).replace(loadMarker,loadReplacement);
       document.open();
       document.write(html);
       document.close();
