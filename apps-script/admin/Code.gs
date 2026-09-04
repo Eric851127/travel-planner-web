@@ -8,7 +8,7 @@ const ADMIN_CONFIG = {
   TRANSPORT_TYPES: ['train','bus','ferry','rental_car','airport_transfer','other']
 };
 
-function doGet(){return HtmlService.createHtmlOutputFromFile('Admin').setTitle('Travel Planner Admin').setXFrameOptionsMode(HtmlService.XFrameOptionsMode.DEFAULT);}
+function doGet(){return HtmlService.createHtmlOutputFromFile('Admin').setTitle('Travel Planner Admin').setXFrameOptionsMode(HtmlService.XFrameOptionsMode.ALLOWALL);}
 function getAdminIdentity_(){const email=String(Session.getActiveUser().getEmail()||'').trim().toLowerCase();if(!email)throw new Error('無法取得目前登入的 Google 帳戶。請確認 Admin Web App 設為「以存取 Web App 的使用者身分執行」，並重新授權。');return email;}
 function isTruthyAdminValue_(value){const v=String(value==null?'':value).trim().toLowerCase();return value===true||v==='true'||v==='1'||v==='yes';}
 function getAuthorizedAdmin_(){const email=getAdminIdentity_(),ss=SpreadsheetApp.openById(ADMIN_CONFIG.SPREADSHEET_ID),members=readSheetObjects_(requiredSheet_(ss,ADMIN_CONFIG.SHEETS.members));const member=members.find(function(row){return String(row.email||'').trim().toLowerCase()===email;});if(!member)throw new Error('此 Google 帳戶尚未加入 Admin 授權名單：'+email);if(!isTruthyAdminValue_(member.active))throw new Error('此成員目前已停用，無法使用 Admin。');if(!isTruthyAdminValue_(member.admin_access))throw new Error('此帳戶沒有 Admin 管理權限。');return{id:member.id||'',name:member.name||email,email:email,group:member.group||'',role:member.role||''};}
