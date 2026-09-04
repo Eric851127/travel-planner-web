@@ -3,13 +3,20 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
-<title>旅遊行程規劃</title>
-<link rel="stylesheet" href="styles.css?v=p78-20260904">
+<meta name="theme-color" content="#f6f7f9">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="default">
+<meta name="apple-mobile-web-app-title" content="Travel Planner">
+<title>Travel Planner</title>
+<link rel="manifest" href="manifest.webmanifest?v=p8-20260904">
+<link rel="icon" href="app-icon.svg?v=p8-20260904" type="image/svg+xml">
+<link rel="apple-touch-icon" href="app-icon.svg?v=p8-20260904">
+<link rel="stylesheet" href="styles.css?v=p8-20260904">
 </head>
 <body>
 <div class="app-shell">
 <header class="topbar">
-<div><div class="eyebrow">旅遊行程規劃</div><h1 id="pageTitle">今日</h1></div>
+<div><div class="eyebrow">Travel Planner</div><h1 id="pageTitle">今日</h1></div>
 <button id="refreshBtn" class="icon-button" aria-label="重新整理">↻</button>
 </header>
 <main id="app" class="content"></main>
@@ -22,7 +29,7 @@
 <script>
 (() => {
   const STORAGE_KEY = 'travelPlanner.apiBase.v1';
-  const BUILD_VERSION = 'P7.8 · 2026-09-04';
+  const BUILD_VERSION = 'P8.1 + P8.2 · 2026-09-04';
   const app = document.getElementById('app');
   const pageTitle = document.getElementById('pageTitle');
   const refreshBtn = document.getElementById('refreshBtn');
@@ -80,14 +87,14 @@
       buildVersion: BUILD_VERSION,
       storageKey: STORAGE_KEY
     };
-
     try {
-      await appendScript('app.js?v=p78-20260904');
-      await appendScript('p7network.js?v=p78-20260904');
-      await appendScript('p4.js?v=p78-20260904');
-      await appendScript('p7.js?v=p78-20260904');
-      await appendScript('p7map.js?v=p78-20260904');
-      await appendScript('p7today.js?v=p78-20260904');
+      await appendScript('app.js?v=p8-20260904');
+      await appendScript('p7network.js?v=p8-20260904');
+      await appendScript('p4.js?v=p8-20260904');
+      await appendScript('p7.js?v=p8-20260904');
+      await appendScript('p7map.js?v=p8-20260904');
+      await appendScript('p7today.js?v=p8-20260904');
+      await appendScript('p8.js?v=p8-20260904');
     } catch (error) {
       console.error(error);
       app.innerHTML = '<div class="card error">前端程式載入失敗，請重新整理頁面。</div>';
@@ -98,24 +105,10 @@
     pageTitle.textContent = '設定資料來源';
     refreshBtn.hidden = true;
     nav.hidden = true;
-    app.innerHTML = `
-      <section class="stack">
-        <div class="card">
-          <h2>連接旅程資料</h2>
-          <div class="meta">請貼上你的 Google Apps Script Web App URL。網址只會儲存在這台裝置的瀏覽器中，不會寫入 GitHub。</div>
-        </div>
-        <div class="card">
-          <label for="apiSourceInput"><strong>Apps Script Web App URL</strong></label>
-          <input id="apiSourceInput" type="url" inputmode="url" autocomplete="off" autocapitalize="off" spellcheck="false" placeholder="https://script.google.com/macros/s/.../exec" style="width:100%;box-sizing:border-box;margin-top:10px;padding:12px;border:1px solid #ccc;border-radius:10px;font-size:16px">
-          <button id="connectSourceBtn" class="retry-button" type="button" style="margin-top:12px;width:100%">測試並儲存</button>
-          <div id="sourceStatus" class="meta" style="margin-top:10px"></div>
-        </div>
-      </section>`;
-
+    app.innerHTML = `<section class="stack"><div class="card"><h2>連接旅程資料</h2><div class="meta">請貼上你的 Google Apps Script Web App URL。網址只會儲存在這台裝置的瀏覽器中，不會寫入 GitHub。</div></div><div class="card"><label for="apiSourceInput"><strong>Apps Script Web App URL</strong></label><input id="apiSourceInput" type="url" inputmode="url" autocomplete="off" autocapitalize="off" spellcheck="false" placeholder="https://script.google.com/macros/s/.../exec" style="width:100%;box-sizing:border-box;margin-top:10px;padding:12px;border:1px solid #ccc;border-radius:10px;font-size:16px"><button id="connectSourceBtn" class="retry-button" type="button" style="margin-top:12px;width:100%">測試並儲存</button><div id="sourceStatus" class="meta" style="margin-top:10px"></div></div></section>`;
     const input = document.getElementById('apiSourceInput');
     const button = document.getElementById('connectSourceBtn');
     const status = document.getElementById('sourceStatus');
-
     button.onclick = async () => {
       button.disabled = true;
       status.textContent = '正在測試連線…';
@@ -134,17 +127,9 @@
   }
 
   const saved = localStorage.getItem(STORAGE_KEY);
-  if (!saved) {
-    showSetup();
-    return;
-  }
-
-  try {
-    loadMainApp(normalizeApiUrl(saved));
-  } catch (error) {
-    localStorage.removeItem(STORAGE_KEY);
-    showSetup();
-  }
+  if (!saved) { showSetup(); return; }
+  try { loadMainApp(normalizeApiUrl(saved)); }
+  catch (error) { localStorage.removeItem(STORAGE_KEY); showSetup(); }
 })();
 </script>
 </body>
