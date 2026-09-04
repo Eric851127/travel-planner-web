@@ -1,4 +1,4 @@
-/* P8.1 single entry + P8.2 PWA */
+/* P8.1 single entry + P8.2 PWA + P8.1.1 in-app Admin */
 (function () {
   const ADMIN_URL_KEY = 'travelPlanner.adminUrl.v1';
   let installPrompt = null;
@@ -26,6 +26,56 @@
     return /iphone|ipad|ipod/i.test(navigator.userAgent);
   }
 
+  function ensureAdminShell() {
+    let shell = document.getElementById('p811AdminShell');
+    if (shell) return shell;
+
+    shell = document.createElement('section');
+    shell.id = 'p811AdminShell';
+    shell.className = 'p811-admin-shell';
+    shell.setAttribute('aria-hidden', 'true');
+    shell.innerHTML = `
+      <header class="p811-admin-bar">
+        <div class="p811-admin-title"><strong>編輯旅程</strong><span>Travel Planner · 管理模式</span></div>
+        <button class="p811-close" id="p811CloseAdmin" type="button">← 返回旅程</button>
+      </header>
+      <div class="p811-admin-body">
+        <div class="p811-admin-loading" id="p811AdminLoading">正在開啟管理模式…</div>
+        <iframe class="p811-admin-frame" id="p811AdminFrame" title="Travel Planner Admin"></iframe>
+      </div>`;
+    document.body.appendChild(shell);
+
+    document.getElementById('p811CloseAdmin').onclick = closeAdmin;
+    document.getElementById('p811AdminFrame').addEventListener('load', () => {
+      const loading = document.getElementById('p811AdminLoading');
+      if (loading) loading.hidden = true;
+    });
+    return shell;
+  }
+
+  function openAdmin() {
+    const adminUrl = readAdminUrl();
+    if (!adminUrl) return;
+    const shell = ensureAdminShell();
+    const frame = document.getElementById('p811AdminFrame');
+    const loading = document.getElementById('p811AdminLoading');
+    if (loading) loading.hidden = false;
+    shell.classList.add('open');
+    shell.setAttribute('aria-hidden', 'false');
+    document.body.classList.add('p811-admin-open');
+    frame.src = adminUrl + '?embedded=1&_ts=' + Date.now();
+  }
+
+  function closeAdmin() {
+    const shell = document.getElementById('p811AdminShell');
+    const frame = document.getElementById('p811AdminFrame');
+    if (!shell) return;
+    shell.classList.remove('open');
+    shell.setAttribute('aria-hidden', 'true');
+    document.body.classList.remove('p811-admin-open');
+    if (frame) frame.src = 'about:blank';
+  }
+
   function moreHtml() {
     const adminUrl = readAdminUrl();
     const installed = standalone();
@@ -36,7 +86,7 @@
       </div>
       <div class="card">
         <div class="p8-setting-head"><div><div class="summary-kicker">管理</div><h3>編輯旅程</h3></div><span class="badge ${adminUrl ? 'confirmed' : 'tentative'}">${adminUrl ? '已連接' : '尚未設定'}</span></div>
-        <div class="meta p8-setting-copy">${adminUrl ? '從這裡直接進入管理端，不必另外找第二個網址。' : '第一次貼上 Admin Apps Script Web App 網址；之後這台手機會記住。'}</div>
+        <div class="meta p8-setting-copy">${adminUrl ? '直接在 Travel Planner 裡切換到管理模式，不會另外開啟瀏覽器分頁。' : '第一次貼上 Admin Apps Script Web App 網址；之後這台手機會記住。'}</div>
         ${adminUrl ? `<button class="p8-primary-action" id="openAdminBtn" type="button">⚙️ 進入編輯模式</button><button class="p8-text-action" id="changeAdminBtn" type="button">更換 Admin 網址</button>` : `<div class="p8-url-setup"><input id="adminUrlInput" type="url" inputmode="url" autocomplete="off" autocapitalize="off" spellcheck="false" placeholder="https://script.google.com/macros/s/.../exec"><button class="p8-primary-action" id="saveAdminBtn" type="button">儲存 Admin 網址</button><div id="adminUrlStatus" class="meta"></div></div>`}
       </div>
       <div class="card">
@@ -50,7 +100,7 @@
 
   function bindMore() {
     const open = document.getElementById('openAdminBtn');
-    if (open) open.onclick = () => window.open(readAdminUrl(), '_blank', 'noopener,noreferrer');
+    if (open) open.onclick = openAdmin;
 
     const change = document.getElementById('changeAdminBtn');
     if (change) change.onclick = () => {
