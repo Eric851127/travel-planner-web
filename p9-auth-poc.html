@@ -94,7 +94,7 @@ h1{font-size:28px;line-height:1.25;margin:0 0 8px}.lead{color:#666;font-size:16p
     }
     return defaultAdminUrl();
   }
-  function goAdmin(){localStorage.removeItem(RETURN_KEY);location.replace(safeAdminTarget());}
+  function goAdmin(){const target=safeAdminTarget();localStorage.removeItem(RETURN_KEY);location.replace(target);}
   function clearSession(){localStorage.removeItem(SESSION_KEY);}
 
   async function sessionCheck(){
