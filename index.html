@@ -87,6 +87,7 @@
       buildVersion: BUILD_VERSION,
       storageKey: STORAGE_KEY
     };
+    window.TRAVEL_PLANNER_DEFER_INITIAL_RENDER = true;
     try {
       await appendScript('app.js?v=p15-20260905');
       await appendScript('p7network.js?v=p15-20260905');
