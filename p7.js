@@ -57,11 +57,9 @@
       }));
     };
 
-    // app.js may already have started its first render before this patch loaded.
-    // Force one clean render so P7.2 takes effect immediately.
     state.date = null;
     state.cache.clear();
-    renderCurrent(true);
+    if (!window.TRAVEL_PLANNER_DEFER_INITIAL_RENDER) renderCurrent(true);
   } catch (error) {
     console.error('P7 patch failed', error);
   }
