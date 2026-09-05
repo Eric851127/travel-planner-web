@@ -1,4 +1,4 @@
-/* P14.3 Traveler PlaceMemo rendering. Fail-soft: memo API failure never blocks existing views. */
+/* P14.3 Traveler PlaceMemo rendering. P15.1: reads through shared api/bootstrap cache. */
 (function(){'use strict';
   const memoIcons={food:'🍴',shopping:'🛍',note:'📝',reservation:'⏰'};
   let memoCache=null,memoPromise=null;
@@ -10,33 +10,14 @@
     document.head.appendChild(s);
   }
 
-  function memoApiBase(){return String(config&&config.apiBase||'').trim()}
-
-  function jsonp(url,timeoutMs=10000){
-    return new Promise((resolve,reject)=>{
-      const cb='__tpP14Memo_'+Date.now()+'_'+Math.random().toString(36).slice(2);
-      const script=document.createElement('script');
-      const timer=setTimeout(()=>done(new Error('memo timeout')),timeoutMs);
-      function done(error,data){clearTimeout(timer);try{delete window[cb]}catch(_){}script.remove();error?reject(error):resolve(data)}
-      window[cb]=data=>done(null,data);
-      url.searchParams.set('callback',cb);
-      script.src=url.toString();script.async=true;script.onerror=()=>done(new Error('memo load failed'));
-      document.head.appendChild(script);
-    });
-  }
-
   async function loadMemos(force=false){
     if(!force&&memoCache)return memoCache;
     if(!force&&memoPromise)return memoPromise;
     memoPromise=(async()=>{
       try{
-        const base=memoApiBase();
-        if(!base)throw new Error('memo api base unavailable');
-        let data;
-        try{data=await jsonp(new URL(base+'/place_memos'));}
-        catch(_){const u=new URL(base);u.searchParams.set('resource','place_memos');data=await jsonp(u)}
-        if(!data||!data.success||!Array.isArray(data.data))throw new Error('memo api unavailable');
-        memoCache=data.data.slice().sort((a,b)=>String(a.place_id||'').localeCompare(String(b.place_id||''))||Number(a.sort_order||0)-Number(b.sort_order||0)||String(a.title||'').localeCompare(String(b.title||'')));
+        const rows=await api('place_memos',{},force);
+        if(!Array.isArray(rows))throw new Error('memo api unavailable');
+        memoCache=rows.slice().sort((a,b)=>String(a.place_id||'').localeCompare(String(b.place_id||''))||Number(a.sort_order||0)-Number(b.sort_order||0)||String(a.title||'').localeCompare(String(b.title||'')));
       }catch(error){console.warn('P14 memo read unavailable; Traveler continues without memos.',error);memoCache=[]}
       finally{memoPromise=null}
       return memoCache;
@@ -114,8 +95,7 @@
 
   function attach(){
     addStyles();patchToday();patchTrip();patchMap();memoCache=null;
-    try{state.cache.clear()}catch(_){}
-    try{renderCurrent(true)}catch(error){console.warn('P14 initial render failed',error)}
+    try{renderCurrent(false)}catch(error){console.warn('P14 initial render failed',error)}
   }
   if(document.readyState==='loading')document.addEventListener('DOMContentLoaded',attach);else attach();
 })();
