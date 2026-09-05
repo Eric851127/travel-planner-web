@@ -1,4 +1,4 @@
-const CACHE_NAME = 'travel-planner-p13-2-mode-switch-20260904';
+const CACHE_NAME = 'travel-planner-p14-2-place-memos-admin-20260905';
 const APP_SHELL = [
   './',
   './index.html',
@@ -12,6 +12,7 @@ const APP_SHELL = [
   './p8.js',
   './admin.html',
   './admin-p11.html',
+  './p14-place-memos-admin.js',
   './p9-auth-poc.html',
   './manifest.webmanifest',
   './app-icon.svg'
