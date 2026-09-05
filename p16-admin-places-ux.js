@@ -230,7 +230,7 @@
   function apply() {
     installStyles();
     const input = ensurePlaceSearch();
-    if (input) applyPlacesLayout(input.value);
+    if (input && placeCards().length) applyPlacesLayout(input.value);
     enhanceItineraryPicker();
   }
 
