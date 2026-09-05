@@ -86,9 +86,6 @@ For the current cleanup phase, diagnostics-only files remain at their existing r
 
 ## 4. Apps Script source directories
 
-Top-level guide:
-- `apps-script/README.md`
-
 ### `apps-script/traveler-public-api/`
 
 Purpose: anonymous Traveler read-only API.
@@ -96,10 +93,8 @@ Purpose: anonymous Traveler read-only API.
 Canonical current source:
 - `Code.gs`
 
-Historical snapshots:
+Historical comparison snapshot:
 - `snapshots/Code.pre-p15-bootstrap.gs`
-
-The old misleading filename `Code.current-production.gs` has been retired. The archived snapshot is the exact same historical blob, only relocated under `snapshots/` with a version-meaningful name.
 
 Documentation:
 - `README.md`
@@ -127,15 +122,20 @@ Do not use for current production development.
 
 ## 5. Documentation
 
+Documentation index:
+- `docs/README.md`
+
 Current authority documents:
 - `README.md` — repository orientation and safety rules
 - `docs/CURRENT_PROJECT_STATUS.md` — current milestone / production state
 - `docs/APPS_SCRIPT_SOURCE_MAP.md` — backend source authority and deployment boundaries
 - `docs/MAIN_BRANCH_MAP.md` — runtime file classification
 - `docs/DIAGNOSTICS.md` — root support/diagnostic page classification
-- `apps-script/README.md` — Apps Script directory roles
 
-Historical implementation documents may remain for migration context but do not override the authority documents above.
+Historical milestone documents are archived under:
+- `docs/history/`
+
+Files in `docs/history/` are retained for audit and rollback context only. They do not override current authority documents.
 
 ## 6. Known technical debt
 
@@ -155,15 +155,14 @@ Historical implementation documents may remain for migration context but do not 
 - historical P* filenames mix production runtime and diagnostics
 - `p9-auth-poc.html` has a misleading historical filename but is production-required
 - diagnostics-only pages remain in root to preserve compatibility during cleanup
-- historical docs may describe earlier phase state
-- Admin root backend source is not yet fully mirrored verbatim in GitHub
+- historical docs are isolated under `docs/history/`
 
 ## 7. Safe cleanup policy
 
 Before deleting, renaming, moving, or consolidating any production-looking file:
 
 1. Check whether `index.html`, `admin.html`, `admin-p11.html`, `sw.js`, or another runtime file references it.
-2. Check `docs/MAIN_BRANCH_MAP.md`, `docs/DIAGNOSTICS.md`, and `docs/APPS_SCRIPT_SOURCE_MAP.md`.
+2. Check `docs/README.md`, `docs/MAIN_BRANCH_MAP.md`, `docs/DIAGNOSTICS.md`, and `docs/APPS_SCRIPT_SOURCE_MAP.md`.
 3. Confirm the live Apps Script deployment/source role if backend-related.
 4. Separate repository/layout cleanup from behavior fixes.
 5. Compare behavior against functional baseline commit `55fd670eb4a2baa33e3d09ee12affad6e56c58be` if any regression appears.
