@@ -1,15 +1,9 @@
 /* P12 production Admin cutover + Maps settings */
 (function () {
   const ADMIN_PATH = 'admin.html';
-  const MAP_SETTINGS_KEY = 'travelPlanner.googleMaps.v1';
   let installPrompt = null;
 
-  function readMapSettings() {
-    try {
-      const saved = JSON.parse(localStorage.getItem(MAP_SETTINGS_KEY) || '{}');
-      return { apiKey: String(saved.apiKey || '').trim(), mapId: String(saved.mapId || '').trim() };
-    } catch (_) { return { apiKey: '', mapId: '' }; }
-  }
+  function readMapSettings() { return window.TRAVEL_PLANNER_MAPS.readSettings(); }
   function standalone() { return window.matchMedia('(display-mode: standalone)').matches || window.navigator.standalone === true; }
   function isIos() { return /iphone|ipad|ipod/i.test(navigator.userAgent); }
 
@@ -29,8 +23,8 @@
     const open = document.getElementById('openAdminBtn');
     if (open) open.onclick = () => { window.location.href = ADMIN_PATH; };
     const saveMaps=document.getElementById('saveMapsBtn');
-    if(saveMaps)saveMaps.onclick=()=>{const apiKey=String(document.getElementById('p8MapApiKey').value||'').trim(),mapId=String(document.getElementById('p8MapId').value||'').trim(),status=document.getElementById('mapsStatus');if(!apiKey||!mapId){status.textContent='API Key 與 Map ID 都需要填寫。';return;}localStorage.setItem(MAP_SETTINGS_KEY,JSON.stringify({apiKey,mapId}));status.textContent='已儲存。回到「今日」後地圖會自動載入。';setTimeout(renderMore,500);};
-    const clearMaps=document.getElementById('clearMapsBtn');if(clearMaps)clearMaps.onclick=()=>{if(window.confirm('要清除這台裝置的 Google Maps 設定嗎？')){localStorage.removeItem(MAP_SETTINGS_KEY);renderMore();}};
+    if(saveMaps)saveMaps.onclick=()=>{const apiKey=String(document.getElementById('p8MapApiKey').value||'').trim(),mapId=String(document.getElementById('p8MapId').value||'').trim(),status=document.getElementById('mapsStatus');if(!apiKey||!mapId){status.textContent='API Key 與 Map ID 都需要填寫。';return;}window.TRAVEL_PLANNER_MAPS.saveSettings(apiKey,mapId);status.textContent='已儲存。回到「今日」後地圖會自動載入。';setTimeout(renderMore,500);};
+    const clearMaps=document.getElementById('clearMapsBtn');if(clearMaps)clearMaps.onclick=()=>{if(window.confirm('要清除這台裝置的 Google Maps 設定嗎？')){window.TRAVEL_PLANNER_MAPS.clearSettings();renderMore();}};
     const install=document.getElementById('installAppBtn');if(install)install.onclick=async()=>{if(!installPrompt){install.textContent='請使用瀏覽器的「安裝 App／加入主畫面」';return;}installPrompt.prompt();await installPrompt.userChoice;installPrompt=null;renderMore();};
   }
   window.addEventListener('beforeinstallprompt',event=>{event.preventDefault();installPrompt=event;if(state.view==='more')renderMore();});
