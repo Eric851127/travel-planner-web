@@ -95,7 +95,7 @@
 
   function attach(){
     addStyles();patchToday();patchTrip();patchMap();memoCache=null;
-    try{renderCurrent(false)}catch(error){console.warn('P14 initial render failed',error)}
+    if(!window.TRAVEL_PLANNER_DEFER_INITIAL_RENDER){try{renderCurrent(false)}catch(error){console.warn('P14 initial render failed',error)}}
   }
   if(document.readyState==='loading')document.addEventListener('DOMContentLoaded',attach);else attach();
 })();
