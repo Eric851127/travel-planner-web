@@ -2,10 +2,10 @@
 
 Last synchronized: 2026-09-05
 
-Current production baseline: **P15.3**
+Current production behavior baseline: **P15.3**
 Functional regression baseline commit: `55fd670eb4a2baa33e3d09ee12affad6e56c58be`
 
-This document is the current milestone/source-of-truth summary. When old branches, PRs, historical docs, or chat history conflict with this file, verify against GitHub `main`, `docs/APPS_SCRIPT_SOURCE_MAP.md`, and the two live Apps Script projects.
+Traveler runtime cleanup Phases A/B/C are now applied on top of the P15.3 behavior boundary. The cleanup changes ownership/structure, not the intended product behavior.
 
 ## 1. Production architecture
 
@@ -39,7 +39,7 @@ Responsibilities:
 - resource allowlist
 - filtering / sorting
 - public field whitelist
-- P15.1 `traveler_bootstrap`
+- `traveler_bootstrap` remains available server-side
 
 Traveler stores this endpoint in localStorage under:
 `travelPlanner.apiBase.v1`
@@ -81,8 +81,6 @@ The verified `Code.gs` includes the production route:
 if (mode === 'admin_api') return p10AdminApi_(e);
 ```
 
-The previous GitHub source-of-truth gap for the Admin root P9 file is therefore closed.
-
 ### Traveler public API
 
 Directory:
@@ -93,8 +91,6 @@ Canonical current source:
 
 Historical comparison snapshot:
 - `snapshots/Code.pre-p15-bootstrap.gs`
-
-The snapshot contains public PlaceMemos support but predates P15.1 `traveler_bootstrap` and must not be treated as current production source.
 
 ### Legacy Admin
 
@@ -142,7 +138,6 @@ Model rule:
 - Place is the parent entity
 - Memo attaches to a concrete Place
 - Memo does not create a map pin
-- Do not invent broad city/area Places only to attach wishlist notes
 
 ## 4. GitHub Pages
 
@@ -157,37 +152,41 @@ Admin:
 
 GitHub Pages publishes from `main`.
 
-### Traveler production runtime
-
-Primary files:
-- `index.html`
-- `app.js`
-- `p7network.js`
-- `p15-bootstrap.js`
-- `p4.js`
-- `p7.js`
-- `p7map.js`
-- `p7today.js`
-- `p8.js`
-- `p14-place-memos-traveler.js`
-- `styles.css`
-- `sw.js`
-
-Verified P15.3 script execution order:
+### Traveler production runtime after cleanup Phase C
 
 ```text
 app.js
 p7network.js
-p15-bootstrap.js
 p4.js
 p7.js
+p7maps-shared.js
 p7map.js
 p7today.js
 p8.js
 p14-place-memos-traveler.js
+p16-runtime-core.js
 ```
 
-This load order is currently part of production behavior and must not be changed as part of an unrelated bug fix.
+Ownership:
+- `jsonp` → `p7network.js`
+- `api` → `p16-runtime-core.js`
+- `ensureDates` → `p16-runtime-core.js`
+- `bindDateControls` → `p16-runtime-core.js`
+- `renderCurrent` → `p16-runtime-core.js`
+- `renderToday` → `p7today.js`
+- `renderTrip` → `p14-place-memos-traveler.js`
+- `renderBookings` → `p4.js`
+- `renderMap` → `p7map.js`
+- `renderMore` → `p8.js`
+
+Shared runtimes:
+- Maps → `p7maps-shared.js`
+- PlaceMemo → `p14-place-memos-traveler.js`
+
+`p15-bootstrap.js` is retained in GitHub but is **dormant / non-runtime**. It is no longer loaded by `index.html` and no longer belongs to the service-worker app shell.
+
+Detailed contract:
+`docs/TRAVELER_RUNTIME_EXECUTION_MAP.md`
 
 ### Admin production runtime
 
@@ -197,10 +196,11 @@ Primary files:
 - `p14-place-memos-admin.js`
 - `p9-auth-poc.html`
 
-`admin.html` currently patches `admin-p11.html` at runtime. This is active technical debt but production-stable and intentionally deferred.
+`admin.html` still patches `admin-p11.html` at runtime. This remains active technical debt but is production-stable.
 
-## 5. Completed milestones
+## 5. Completed milestones / cleanup
 
+Product milestones:
 - P9 Authentication: PASS
 - P10 protected Admin CRUD: PASS
 - P11 Admin UI: PASS
@@ -216,48 +216,48 @@ Primary files:
 - Safari major flows: PASS
 - installed PWA major flows: PASS
 
-Important auth rules:
-- do not change the OAuth callback URI casually
-- `p9-auth-poc.html` remains part of the OAuth/login flow
-- do not change Members/session schema during unrelated UI work
-- do not use the Admin endpoint as Traveler public data API
+Cleanup phases:
+- Phase A shared Maps helper consolidation: PASS
+- Phase B renderer-native PlaceMemo consolidation: PASS
+- Phase C Traveler core ownership consolidation: implementation complete; smoke test pending
 
-## 6. P15 production behavior boundary
+## 6. Auth / Cloud safety rules
 
-P15.3 is the known-good baseline.
+Do not casually change:
+- OAuth callback URI
+- `p9-auth-poc.html` path
+- OAuth client behavior
+- Members/session schema
+- Admin Apps Script deployment URL
+- Traveler public Apps Script deployment URL
+- Maps API key website restrictions/referrers
+- Map ID
+- GitHub Pages origin/domain
 
-Important warning:
-- multiple Traveler scripts override shared globals such as `api`, `ensureDates`, and render functions
-- the current script order may look architecturally inconsistent but is production-tested
-- do not "fix" override order without a dedicated migration and explicit smoke testing
+If a frontend cleanup requires Google Cloud Console changes, stop before implementation and inform the project owner first.
 
-The exact P15 bootstrap/API composition should be treated as an architecture investigation item, not a small bug fix.
+## 7. Current technical debt backlog
 
-## 7. Technical debt backlog
+### Traveler
+- `app.js` still contains legacy base implementations that are overridden by final owners
+- active runtime is cleaner but still split across historical P-numbered files
+- render/date/group switching stability still needs product-level P16 validation/fix work
 
-### Safe documentation/source cleanup
-- keep source-of-truth docs synchronized
-- clearly label canonical vs historical Apps Script snapshots
-- document runtime vs diagnostic root files
-- keep manual Apps Script deployments synchronized back to GitHub
+### Admin
+- `admin.html` string-patches `admin-p11.html`
+- large single-file Admin UI
+- Places/Itinerary place-selection UX remains unintuitive
+- Flights/Transport information architecture still needs product-level consolidation
 
-### P16 product/UX work
-- render/date/group switching stability
-- Admin Places/Itinerary place-selection UX
-- Flights/Transport UI information architecture
-- reduction of redundant UI/legacy entrypoints where proven safe
-
-### P17 architecture consolidation
-- remove Traveler patch-on-patch global ownership
-- define one formal render lifecycle
-- define one formal data/API adapter lifecycle
-- consolidate Admin wrapper/base UI when safe
-
-Do not mix P17 architecture cleanup into a small P16 behavior fix.
+### Repository / deployment
+- manual Apps Script deployment can drift from GitHub if not synchronized
+- diagnostics-only root pages remain in place for compatibility
+- dormant `p15-bootstrap.js` remains for historical/architecture reference
 
 ## 8. Main branch safety map
 
 See:
 `docs/MAIN_BRANCH_MAP.md`
 
-This file classifies active runtime, diagnostics, Apps Script canonical sources/snapshots, legacy fallback, and known technical debt so old P-numbered filenames are not accidentally removed or reordered.
+If any Traveler regression appears during cleanup, compare against functional baseline:
+`55fd670eb4a2baa33e3d09ee12affad6e56c58be`
