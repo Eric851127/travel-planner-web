@@ -16,12 +16,11 @@ PWA/runtime shell:
 - `styles.css`
 - `app-icon.svg`
 
-Traveler JavaScript runtime, loaded in verified P15.3-relative order plus the shared runtime helpers:
+Traveler JavaScript runtime after Phase C consolidation:
 
 ```text
 app.js
 p7network.js
-p15-bootstrap.js
 p4.js
 p7.js
 p7maps-shared.js
@@ -29,26 +28,35 @@ p7map.js
 p7today.js
 p8.js
 p14-place-memos-traveler.js
+p16-runtime-core.js
 ```
 
-`p7maps-shared.js` is an active shared dependency for `p7map.js`, `p7today.js`, and `p8.js`. It owns Maps settings/storage/loader helpers only; it does not own render lifecycle or API data access.
-
-`p14-place-memos-traveler.js` now owns the shared PlaceMemo runtime and the native Trip renderer. It no longer wraps Today/Trip/Map after rendering. Today and Map render memo HTML directly inside their own renderers.
+Current responsibility map:
+- `app.js` — base state, DOM helpers, base render/helper definitions retained for compatibility
+- `p7network.js` — resilient JSONP transport only
+- `p4.js` — Bookings + legacy More renderer
+- `p7.js` — smart-date + group display helpers only
+- `p7maps-shared.js` — shared Maps settings/loader/URL helpers
+- `p7map.js` — native Map renderer
+- `p7today.js` — native Today renderer
+- `p8.js` — current More renderer + PWA/Admin navigation
+- `p14-place-memos-traveler.js` — shared PlaceMemo runtime + native Trip renderer
+- `p16-runtime-core.js` — final owner for `api`, `ensureDates`, `bindDateControls`, and `renderCurrent`
 
 Detailed verified ownership/execution map:
 - `docs/TRAVELER_RUNTIME_EXECUTION_MAP.md`
 
+### Dormant / non-runtime Traveler file
+
+- `p15-bootstrap.js`
+  - retained in repository for historical comparison / deliberate future architecture work
+  - no longer loaded by `index.html`
+  - no longer in the PWA app shell
+  - must not be re-added casually; previous load-order changes around this adapter caused production API regression
+
 ### Important
 
-The P-numbered filenames are historical, but several are still active production runtime dependencies.
-
-Do not:
-- rename them casually
-- reorder them casually
-- delete them because an older phase number appears obsolete
-- merge them during a small bug fix
-
-Their remaining global override behavior is technical debt to be handled in the core runtime consolidation phase.
+The historical P-numbered filenames do not by themselves indicate whether a file is active. Use this map and `index.html` / `sw.js` as the authority before moving or deleting anything.
 
 ## 2. Admin production entry
 
@@ -139,7 +147,7 @@ Current authority documents:
 - `docs/CURRENT_PROJECT_STATUS.md` — current milestone / production state
 - `docs/APPS_SCRIPT_SOURCE_MAP.md` — backend source authority and deployment boundaries
 - `docs/MAIN_BRANCH_MAP.md` — runtime file classification
-- `docs/TRAVELER_RUNTIME_EXECUTION_MAP.md` — verified Traveler global ownership and load-order contract
+- `docs/TRAVELER_RUNTIME_EXECUTION_MAP.md` — verified Traveler ownership and load-order contract
 - `docs/DIAGNOSTICS.md` — root support/diagnostic page classification
 
 Historical milestone documents are archived under:
@@ -150,13 +158,11 @@ Files in `docs/history/` are retained for audit and rollback context only. They 
 ## 6. Known technical debt
 
 ### Traveler
-- patch-on-patch global overrides remain around the data/date core
-- runtime behavior still depends on script load order
-- final `api` owner is `p4.js`, not `p15-bootstrap.js`
-- final `ensureDates` owner is `p7.js`, not `p15-bootstrap.js`
-- Maps settings/loader helpers are consolidated under `p7maps-shared.js`
+- core data/date/dispatch ownership is now consolidated under `p16-runtime-core.js`
+- Maps helpers are consolidated under `p7maps-shared.js`
 - PlaceMemo post-render wrappers are removed; memo rendering is native in Today/Trip/Map
-- renderer ownership is now explicit, but `renderCurrent` and the data/date lifecycle still have no single architecture owner
+- `app.js` still contains legacy base implementations that are overridden by final owners and can be reduced in a later dedicated cleanup
+- historical P-numbered files remain as separate active renderer/helper modules
 
 ### Admin
 - `admin.html` performs string-patch composition over `admin-p11.html`
@@ -166,6 +172,7 @@ Files in `docs/history/` are retained for audit and rollback context only. They 
 ### Repository
 - historical P* filenames mix production runtime and diagnostics
 - `p9-auth-poc.html` has a misleading historical filename but is production-required
+- `p15-bootstrap.js` is now dormant but intentionally retained for historical/architecture reference
 - diagnostics-only pages remain in root to preserve compatibility during cleanup
 - historical docs are isolated under `docs/history/`
 
