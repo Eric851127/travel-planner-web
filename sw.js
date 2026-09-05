@@ -1,4 +1,4 @@
-const CACHE_NAME = 'travel-planner-p15-2b-startup-render-20260905';
+const CACHE_NAME = 'travel-planner-p15-2c-parallel-preload-20260905';
 const APP_SHELL = [
   './',
   './index.html',
