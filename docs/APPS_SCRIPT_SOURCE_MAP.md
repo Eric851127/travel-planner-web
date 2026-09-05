@@ -18,29 +18,34 @@ Canonical GitHub directory:
 
 `apps-script/admin-backend/`
 
-Files:
-- `Code.branch-base.gs`
+Canonical files:
+- `Code.gs`
 - `Router.gs`
 - `Validators.gs`
 - `Gate.gs`
 - `PlaceMemos.gs`
 - `README.md`
 
-### Important limitation
+### Root source status
 
-GitHub does **not** currently contain a verbatim full copy of the live production root `Code.gs` for this Apps Script project.
+`Code.gs` is now the verified live P9 root source supplied from the currently working `Travel Planner P9 Auth PoC` Apps Script project.
 
-`Code.branch-base.gs` is an older branch-base snapshot and is missing the production `doPost(e)` route:
+It includes the production Admin API route inside `doPost(e)`:
 
 ```js
 if (mode === 'admin_api') return p10AdminApi_(e);
 ```
 
-Therefore:
-- do not rename `Code.branch-base.gs` to `Code.gs`
-- do not paste it over production as-is
-- for the root auth/session entry file, the live `Travel Planner P9 Auth PoC` project remains authoritative until a verbatim production snapshot is committed
-- `Router.gs`, `Validators.gs`, `Gate.gs`, and `PlaceMemos.gs` are the canonical GitHub snapshots for the deployed P10/P14 protected Admin behavior
+This closes the previous GitHub source-of-truth gap for the P9 auth/session root file.
+
+Historical root snapshots are archived under:
+
+`apps-script/admin-backend/snapshots/`
+
+Current archived snapshot:
+- `Code.branch-base.gs`
+
+That snapshot predates the production `admin_api` route and must not be treated as current production source.
 
 Traveler anonymous reads must not be added here.
 
@@ -88,8 +93,6 @@ This is the exact historical blob previously named `Code.current-production.gs`.
 
 It must **not** be treated as current production source.
 
-`README.md` inside this directory is descriptive documentation only; when it conflicts with this file or `docs/CURRENT_PROJECT_STATUS.md`, this source map plus current GitHub main wins.
-
 ## 3. Legacy Apps Script Admin — `apps-script/admin/`
 
 Status: rollback-only legacy code.
@@ -108,9 +111,9 @@ For normal development:
 
 1. GitHub `main` is the production frontend source and canonical architecture/archive map.
 2. For Traveler public Apps Script, `apps-script/traveler-public-api/Code.gs` is canonical.
-3. For Admin P10/P14 modules, `apps-script/admin-backend/Router.gs`, `Validators.gs`, `Gate.gs`, and `PlaceMemos.gs` are canonical snapshots.
-4. For the Admin root P9 auth/session `Code.gs`, the live Apps Script project remains authoritative until a verbatim copy is committed.
-5. Historical feature branches, PRs, and files under `snapshots/` are not production source-of-truth.
+3. For the protected Admin backend, the source set under `apps-script/admin-backend/` is canonical, including `Code.gs` plus `Router.gs`, `Validators.gs`, `Gate.gs`, and `PlaceMemos.gs`.
+4. Files under `snapshots/`, historical feature branches, and historical docs are not production source-of-truth.
+5. If a manual Apps Script production edit happens, synchronize GitHub immediately; until synchronization, live production behavior wins for incident recovery.
 
 ## 5. Deployment boundaries
 
