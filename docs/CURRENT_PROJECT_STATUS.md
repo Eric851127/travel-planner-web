@@ -2,16 +2,14 @@
 
 Last synchronized: 2026-09-05
 
-Current production behavior baseline: **P15.3**
+Current production line: **P16 complete**
 Functional regression baseline commit: `55fd670eb4a2baa33e3d09ee12affad6e56c58be`
-
-Traveler runtime cleanup Phases A/B/C are now applied on top of the P15.3 behavior boundary. The cleanup changes ownership/structure, not the intended product behavior.
 
 ## 1. Production architecture
 
 There are two separate Google Apps Script Web Apps.
 
-### A. `Travel Planner P9 Auth PoC`
+### A. Protected Admin Apps Script
 
 Purpose: protected Admin authentication and writes.
 
@@ -29,7 +27,7 @@ Admin production endpoint:
 
 This endpoint is not the Traveler public read API.
 
-### B. `Travel Planner`
+### B. Traveler public Apps Script
 
 Purpose: anonymous/public read-only API for Traveler.
 
@@ -66,20 +64,14 @@ Directory:
 `apps-script/admin-backend/`
 
 Canonical current source set:
-- `Code.gs` — verified live P9 OAuth/session root source
+- `Code.gs`
 - `Router.gs`
 - `Validators.gs`
 - `Gate.gs`
 - `PlaceMemos.gs`
 
-Historical root snapshot:
+Historical snapshot:
 - `snapshots/Code.branch-base.gs`
-
-The verified `Code.gs` includes the production route:
-
-```js
-if (mode === 'admin_api') return p10AdminApi_(e);
-```
 
 ### Traveler public API
 
@@ -117,9 +109,7 @@ Important sheets:
 - `P5_Import`
 - `PlaceMemos`
 
-### PlaceMemos schema
-
-Columns:
+PlaceMemos schema:
 - `id`
 - `place_id`
 - `type`
@@ -128,16 +118,6 @@ Columns:
 - `priority`
 - `active`
 - `sort_order`
-
-Enums:
-- type: `food`, `shopping`, `note`, `reservation`
-- priority: `high`, `normal`, `low`
-- active: TRUE/FALSE
-
-Model rule:
-- Place is the parent entity
-- Memo attaches to a concrete Place
-- Memo does not create a map pin
 
 ## 4. GitHub Pages
 
@@ -152,7 +132,7 @@ Admin:
 
 GitHub Pages publishes from `main`.
 
-### Traveler production runtime after cleanup Phase C
+### Traveler production runtime
 
 ```text
 app.js
@@ -171,7 +151,7 @@ Ownership:
 - `jsonp` → `p7network.js`
 - `api` → `p16-runtime-core.js`
 - `ensureDates` → `p16-runtime-core.js`
-- `bindDateControls` → `p16-runtime-core.js`
+- date/group/nav/refresh/retry interactions → `p16-runtime-core.js`
 - `renderCurrent` → `p16-runtime-core.js`
 - `renderToday` → `p7today.js`
 - `renderTrip` → `p14-place-memos-traveler.js`
@@ -183,22 +163,29 @@ Shared runtimes:
 - Maps → `p7maps-shared.js`
 - PlaceMemo → `p14-place-memos-traveler.js`
 
-`p15-bootstrap.js` is retained in GitHub but is **dormant / non-runtime**. It is no longer loaded by `index.html` and no longer belongs to the service-worker app shell.
+`p15-bootstrap.js` was dormant / non-runtime and was removed in P16.4. Git history remains the archive.
 
 Detailed contract:
 `docs/TRAVELER_RUNTIME_EXECUTION_MAP.md`
 
 ### Admin production runtime
 
-Primary files:
+Primary composition:
 - `admin.html`
 - `admin-p11.html`
 - `p14-place-memos-admin.js`
+- `p16-admin-places-ux.js`
+- `p16-admin-mobility-detail.js`
 - `p9-auth-poc.html`
 
 `admin.html` still patches `admin-p11.html` at runtime. This remains active technical debt but is production-stable.
 
-## 5. Completed milestones / cleanup
+P16.3.1 Admin reliability rule:
+- base Admin performs the protected bootstrap once
+- `admin.html` exposes the successful bootstrap payload as `window.TRAVEL_PLANNER_ADMIN_BOOTSTRAP`
+- `p16-admin-mobility-detail.js` consumes that shared snapshot and does not issue a second bootstrap request
+
+## 5. Completed milestones
 
 Product milestones:
 - P9 Authentication: PASS
@@ -212,16 +199,61 @@ Product milestones:
 - P14.3 Traveler Memo Rendering: PASS
 - P15.1 Traveler bootstrap / reliability: PASS
 - P15.2 refresh / initial render / parallel preload: PASS
-- P15.3 Traveler Today flight cards: PASS
+- P15.3 Traveler flight cards: PASS
 - Safari major flows: PASS
 - installed PWA major flows: PASS
 
-Cleanup phases:
+P16:
+- P16.1 Interaction Core / first-click stability: PASS
+- P16.2 Places grouping/search + searchable Place picker: PASS
+- P16.3 Mobility Integration: PASS
+- P16.3.1 Admin Bootstrap Reliability: PASS
+- P16.4 safe cleanup / documentation synchronization: COMPLETE
+
+Cleanup foundations:
 - Phase A shared Maps helper consolidation: PASS
 - Phase B renderer-native PlaceMemo consolidation: PASS
-- Phase C Traveler core ownership consolidation: implementation complete; smoke test pending
+- Phase C Traveler core ownership consolidation: PASS
 
-## 6. Auth / Cloud safety rules
+## 6. P16 product results
+
+### Interaction stability
+
+The final interaction owner is `p16-runtime-core.js`, removing the refresh/initial-load first-click race across date, group, nav, refresh, and retry controls.
+
+### Admin Places / Itinerary UX
+
+- Places grouped by city
+- live search across place name / city / address / category
+- searchable Place picker for Itinerary
+- same Place picker pattern reused for Transport origin/destination
+
+### Mobility
+
+Admin UI:
+- Flights + Transport exposed under one top-level `交通`
+- inner views: `航班` / `一般交通`
+- backend resources remain separate
+
+Traveler UI:
+- Flight + Transport treated as mobility segments
+- Today view includes `今日移動`
+- Trip view includes per-day mobility segments
+- explicit `transport_id` relations render human-readable mobility detail
+
+No schema migration or `flight_id` addition was required.
+
+### Admin bootstrap reliability
+
+P16.3 originally added a second heavy Admin bootstrap request from the mobility decorator. P16.3.1 removed it.
+
+Current design:
+- one protected Admin bootstrap per base load
+- shared browser snapshot for dependent Admin decorators
+
+This materially reduced observed `Apps Script 回應逾時` incidents during repeated Admin editing and navigation.
+
+## 7. Auth / Cloud safety rules
 
 Do not casually change:
 - OAuth callback URI
@@ -236,28 +268,33 @@ Do not casually change:
 
 If a frontend cleanup requires Google Cloud Console changes, stop before implementation and inform the project owner first.
 
-## 7. Current technical debt backlog
+## 8. Technical debt deferred to P17
 
 ### Traveler
 - `app.js` still contains legacy base implementations that are overridden by final owners
-- active runtime is cleaner but still split across historical P-numbered files
-- render/date/group switching stability still needs product-level P16 validation/fix work
+- active renderer/helper modules still use historical P-numbered filenames
+- broader runtime lifecycle/API adapter formalization is deferred
 
 ### Admin
 - `admin.html` string-patches `admin-p11.html`
 - large single-file Admin UI
-- Places/Itinerary place-selection UX remains unintuitive
-- Flights/Transport information architecture still needs product-level consolidation
+- auth lifecycle still performs `session_check` before protected bootstrap; this is intentionally unchanged because current behavior is stable
 
-### Repository / deployment
-- manual Apps Script deployment can drift from GitHub if not synchronized
-- diagnostics-only root pages remain in place for compatibility
-- dormant `p15-bootstrap.js` remains for historical/architecture reference
+### Backend / deployment
+- Apps Script deployment can drift from GitHub if manually changed without synchronization
+- Admin bootstrap still reads multiple sheets synchronously; deeper backend optimization is deferred while current latency is acceptable
 
-## 8. Main branch safety map
+### Compatibility files retained intentionally
+- `p9-auth-poc.html` — production OAuth/login callback despite historical filename
+- `p9-auth-diagnostics.html` — diagnostics/support
+- `p10-admin-api.html` — diagnostics/support
+- `admin-p11.html` — active Admin body/fallback
+- Apps Script snapshots — audit/rollback context
 
-See:
+## 9. Regression policy
+
+Main branch safety map:
 `docs/MAIN_BRANCH_MAP.md`
 
-If any Traveler regression appears during cleanup, compare against functional baseline:
+If any regression appears during future architecture work, compare behavior against:
 `55fd670eb4a2baa33e3d09ee12affad6e56c58be`
