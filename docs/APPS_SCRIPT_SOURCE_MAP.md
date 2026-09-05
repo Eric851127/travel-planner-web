@@ -1,5 +1,7 @@
 # Apps Script Source Map
 
+Functional baseline commit: `55fd670eb4a2baa33e3d09ee12affad6e56c58be`
+
 This file defines which source in GitHub `main` corresponds to each live Google Apps Script project.
 
 ## 1. Admin backend — `Travel Planner P9 Auth PoC`
@@ -72,7 +74,19 @@ It includes:
 - members
 - `traveler_bootstrap`
 
-`Code.current-production.gs` is a historical pre-P14/P15 snapshot retained only for comparison/rollback context. It must **not** be treated as the current source-of-truth.
+### Snapshot archive
+
+Historical snapshots live under:
+
+`apps-script/traveler-public-api/snapshots/`
+
+Current archived snapshot:
+
+`Code.pre-p15-bootstrap.gs`
+
+This is the exact historical blob previously named `Code.current-production.gs`. It contains public PlaceMemos support but predates P15.1 `traveler_bootstrap`.
+
+It must **not** be treated as current production source.
 
 `README.md` inside this directory is descriptive documentation only; when it conflicts with this file or `docs/CURRENT_PROJECT_STATUS.md`, this source map plus current GitHub main wins.
 
@@ -86,6 +100,7 @@ Rules:
 - do not route production Traveler/Admin traffic to it
 - do not copy its auth model into the current Admin backend
 - retain until a separate cleanup decision removes the rollback path
+- treat `DEPRECATED.md` as the authority for this directory
 
 ## 4. Source-of-truth hierarchy
 
@@ -95,7 +110,7 @@ For normal development:
 2. For Traveler public Apps Script, `apps-script/traveler-public-api/Code.gs` is canonical.
 3. For Admin P10/P14 modules, `apps-script/admin-backend/Router.gs`, `Validators.gs`, `Gate.gs`, and `PlaceMemos.gs` are canonical snapshots.
 4. For the Admin root P9 auth/session `Code.gs`, the live Apps Script project remains authoritative until a verbatim copy is committed.
-5. Historical feature branches, PRs, and dated snapshots are not production source-of-truth.
+5. Historical feature branches, PRs, and files under `snapshots/` are not production source-of-truth.
 
 ## 5. Deployment boundaries
 
