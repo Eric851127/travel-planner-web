@@ -6,7 +6,9 @@
   let todayMap = null;
   let todayInfo = null;
 
-  const groupNames = { ours: '郭小鼠組', friends: '阿香組' };
+  function groupDisplayName(value) {
+    return window.travelPlannerGroupLabel(value);
+  }
 
   function currentGroup() {
     if (state.group === 'ours' || state.group === 'friends') return state.group;
@@ -22,8 +24,8 @@
   function todayGroupFilters() {
     const group = currentGroup();
     return `<div class="filters today-group-filters">
-      <button class="filter-btn ${group === 'ours' ? 'active' : ''}" data-today-group="ours">郭小鼠組</button>
-      <button class="filter-btn ${group === 'friends' ? 'active' : ''}" data-today-group="friends">阿香組</button>
+      <button class="filter-btn ${group === 'ours' ? 'active' : ''}" data-today-group="ours">${esc(groupDisplayName('ours'))}</button>
+      <button class="filter-btn ${group === 'friends' ? 'active' : ''}" data-today-group="friends">${esc(groupDisplayName('friends'))}</button>
     </div>`;
   }
 
@@ -228,7 +230,7 @@
     return `<div class="stack">${hotels.map(h => {
       const place = placeById.get(h.place_id);
       const url = place ? (safeUrl(place.google_maps_url) || directionsUrl(place, place, 'transit')) : safeUrl(h.google_maps_url);
-      return `<article class="card tonight-hotel"><div class="tonight-hotel-icon">🛏</div><div><div class="summary-kicker">今晚住宿</div><strong>${esc(h.hotel_name || place?.name || '住宿')}</strong><div class="meta">${esc(h.city || '')} · ${esc(groupNames[currentGroup()] || '')}</div><div class="meta">入住 ${esc(h.check_in || '—')} · 退房 ${esc(h.check_out || '—')}</div>${h.address ? `<div class="meta">${esc(h.address)}</div>` : ''}${url ? `<a class="map-link" href="${esc(url)}" target="_blank" rel="noopener noreferrer">導航到飯店 ↗</a>` : ''}</div></article>`;
+      return `<article class="card tonight-hotel"><div class="tonight-hotel-icon">🛏</div><div><div class="summary-kicker">今晚住宿</div><strong>${esc(h.hotel_name || place?.name || '住宿')}</strong><div class="meta">${esc(h.city || '')} · ${esc(groupDisplayName(currentGroup()))}</div><div class="meta">入住 ${esc(h.check_in || '—')} · 退房 ${esc(h.check_out || '—')}</div>${h.address ? `<div class="meta">${esc(h.address)}</div>` : ''}${url ? `<a class="map-link" href="${esc(url)}" target="_blank" rel="noopener noreferrer">導航到飯店 ↗</a>` : ''}</div></article>`;
     }).join('')}</div>`;
   }
 
@@ -258,7 +260,7 @@
 
       app.innerHTML = `<section class="section today-controls">${dateNav()}${todayGroupFilters()}</section>
         ${flightsHtml(flights)}
-        <section class="section map-section"><div class="map-heading-row"><h2>今日地圖</h2><span class="badge">${esc(groupNames[currentGroup()])}</span></div><div id="todayTravelMap" class="travel-map today-travel-map" aria-label="今日行程地圖"></div></section>
+        <section class="section map-section"><div class="map-heading-row"><h2>今日地圖</h2><span class="badge">${esc(groupDisplayName(currentGroup()))}</span></div><div id="todayTravelMap" class="travel-map today-travel-map" aria-label="今日行程地圖"></div></section>
         <section class="section"><h2>今日行程</h2>${routeHtml(stops, transports)}</section>
         <section class="section"><h2>今晚住宿</h2>${hotelsHtml(tonight, placeById)}</section>`;
 
