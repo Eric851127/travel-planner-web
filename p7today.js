@@ -1,4 +1,4 @@
-/* P7.8 itinerary-first Today experience */
+/* P7.8 itinerary-first Today experience + P15.3 flight cards */
 (function () {
   const GROUP_KEY = 'travelPlanner.group.v1';
   const MAP_SETTINGS_KEY = 'travelPlanner.googleMaps.v1';
@@ -107,6 +107,26 @@
 
   function activeHotels(hotels, date) {
     return hotels.filter(h => h.check_in && h.check_out && h.check_in <= date && date < h.check_out);
+  }
+
+  function flightCardHtml(flight) {
+    const carrier = [flight.airline, flight.flight_no].filter(Boolean).join(' ') || '航班';
+    const route = `${flight.departure_airport || '—'} → ${flight.arrival_airport || '—'}`;
+    const time = [flight.departure_time, flight.arrival_time].filter(Boolean).join(' → ');
+    return `<article class="summary-card today-flight-card">
+      <div class="summary-icon">✈</div>
+      <div class="summary-body">
+        <div class="summary-kicker">今日航班</div>
+        <strong>${esc(carrier)}</strong>
+        <div class="route"><span>${esc(route)}</span></div>
+        ${time ? `<div class="meta">${esc(time)}</div>` : ''}
+      </div>
+    </article>`;
+  }
+
+  function flightsHtml(flights) {
+    if (!flights.length) return '';
+    return `<section class="section"><h2>今日航班</h2><div class="summary-scroll">${flights.map(flightCardHtml).join('')}</div></section>`;
   }
 
   function infoHtml(place, label) {
@@ -224,11 +244,12 @@
       }
 
       const group = groupFilterValue();
-      const [items, transports, hotels, places] = await Promise.all([
+      const [items, transports, hotels, places, flights] = await Promise.all([
         api('itinerary', { date: state.date, group }, force),
         api('transport', { date: state.date, group }, force),
         api('hotels', { group }, force),
-        api('places', {}, force)
+        api('places', {}, force),
+        api('flights', { date: state.date, group }, force)
       ]);
 
       const placeById = new Map(places.map(p => [p.id, p]));
@@ -236,6 +257,7 @@
       const tonight = activeHotels(hotels, state.date);
 
       app.innerHTML = `<section class="section today-controls">${dateNav()}${todayGroupFilters()}</section>
+        ${flightsHtml(flights)}
         <section class="section map-section"><div class="map-heading-row"><h2>今日地圖</h2><span class="badge">${esc(groupNames[currentGroup()])}</span></div><div id="todayTravelMap" class="travel-map today-travel-map" aria-label="今日行程地圖"></div></section>
         <section class="section"><h2>今日行程</h2>${routeHtml(stops, transports)}</section>
         <section class="section"><h2>今晚住宿</h2>${hotelsHtml(tonight, placeById)}</section>`;
