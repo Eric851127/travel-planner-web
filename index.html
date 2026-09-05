@@ -8,12 +8,28 @@
 <meta name="apple-mobile-web-app-status-bar-style" content="default">
 <meta name="apple-mobile-web-app-title" content="Travel Planner">
 <title>Travel Planner</title>
-<link rel="manifest" href="manifest.webmanifest?v=p15-20260905">
+<link rel="manifest" href="manifest.webmanifest?v=p15-2-20260905">
 <link rel="icon" href="app-icon.svg?v=p12-20260904" type="image/svg+xml">
 <link rel="apple-touch-icon" href="app-icon.svg?v=p12-20260904">
-<link rel="stylesheet" href="styles.css?v=p15-20260905">
+<link rel="stylesheet" href="styles.css?v=p15-2-20260905">
+<style>
+  #startupScreen{display:none;min-height:100dvh;box-sizing:border-box;padding:calc(24px + env(safe-area-inset-top)) 20px calc(24px + env(safe-area-inset-bottom));background:#f6f7f9;color:#202124;align-items:center;justify-content:center;text-align:center}
+  #startupScreen .startup-card{width:min(360px,100%);padding:28px 20px;border-radius:18px;background:#fff;box-shadow:0 8px 28px rgba(60,64,67,.12)}
+  #startupScreen .startup-mark{font-size:34px;line-height:1;margin-bottom:14px}
+  #startupScreen strong{display:block;font-size:19px;margin-bottom:7px}
+  #startupScreen .startup-meta{font-size:14px;color:#6b7280}
+  body.booting #startupScreen{display:flex}
+  body.booting .app-shell{visibility:hidden;position:absolute;inset:0;pointer-events:none}
+</style>
 </head>
-<body>
+<body class="booting">
+<div id="startupScreen" role="status" aria-live="polite">
+  <div class="startup-card">
+    <div class="startup-mark">✈</div>
+    <strong>正在開啟旅程…</strong>
+    <div class="startup-meta">正在載入最新行程資料</div>
+  </div>
+</div>
 <div class="app-shell">
 <header class="topbar">
 <div><div class="eyebrow">Travel Planner</div><h1 id="pageTitle">今日</h1></div>
@@ -29,11 +45,19 @@
 <script>
 (() => {
   const STORAGE_KEY = 'travelPlanner.apiBase.v1';
-  const BUILD_VERSION = 'P15.1 · 2026-09-05';
+  const BUILD_VERSION = 'P15.2 · 2026-09-05';
   const app = document.getElementById('app');
   const pageTitle = document.getElementById('pageTitle');
   const refreshBtn = document.getElementById('refreshBtn');
   const nav = document.querySelector('.bottom-nav');
+
+  function finishBoot() {
+    requestAnimationFrame(() => {
+      document.body.classList.remove('booting');
+      const startup = document.getElementById('startupScreen');
+      if (startup) startup.remove();
+    });
+  }
 
   function normalizeApiUrl(value) {
     const input = String(value || '').trim();
@@ -89,22 +113,27 @@
     };
     window.TRAVEL_PLANNER_DEFER_INITIAL_RENDER = true;
     try {
-      await appendScript('app.js?v=p15-20260905');
-      await appendScript('p7network.js?v=p15-20260905');
-      await appendScript('p15-bootstrap.js?v=p15-20260905');
-      await appendScript('p4.js?v=p15-20260905');
-      await appendScript('p7.js?v=p15-20260905');
-      await appendScript('p7map.js?v=p15-20260905');
-      await appendScript('p7today.js?v=p15-20260905');
-      await appendScript('p8.js?v=p15-20260905');
-      await appendScript('p14-place-memos-traveler.js?v=p15-20260905');
+      await appendScript('app.js?v=p15-2-20260905');
+      await appendScript('p7network.js?v=p15-2-20260905');
+      await appendScript('p15-bootstrap.js?v=p15-2-20260905');
+      await appendScript('p4.js?v=p15-2-20260905');
+      await appendScript('p7.js?v=p15-2-20260905');
+      await appendScript('p7map.js?v=p15-2-20260905');
+      await appendScript('p7today.js?v=p15-2-20260905');
+      await appendScript('p8.js?v=p15-2-20260905');
+      await appendScript('p14-place-memos-traveler.js?v=p15-2-20260905');
+      finishBoot();
     } catch (error) {
       console.error(error);
       app.innerHTML = '<div class="card error">前端程式載入失敗，請重新整理頁面。</div>';
+      finishBoot();
     }
   }
 
   function showSetup() {
+    document.body.classList.remove('booting');
+    const startup = document.getElementById('startupScreen');
+    if (startup) startup.remove();
     pageTitle.textContent = '設定資料來源';
     refreshBtn.hidden = true;
     nav.hidden = true;
