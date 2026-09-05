@@ -10,6 +10,7 @@
   function loadGoogleMaps(apiKey) { return window.TRAVEL_PLANNER_MAPS.load(apiKey); }
   function coordinates(place) { return window.TRAVEL_PLANNER_MAPS.coordinates(place); }
   function googleMapsUrl(place) { return window.TRAVEL_PLANNER_MAPS.placeSearchUrl(place); }
+  function memoHtml(placeId) { return window.TRAVEL_PLANNER_PLACE_MEMOS ? window.TRAVEL_PLANNER_PLACE_MEMOS.html(placeId) : ''; }
 
   function mapSetupCard() {
     return `<section class="stack">
@@ -62,6 +63,7 @@
         ${usedIds.has(place.id) ? '<span class="badge confirmed">行程使用</span>' : ''}
       </div>
       <div class="meta">${esc(place.city || '')}${place.address ? ` · ${esc(place.address)}` : ''}</div>
+      ${memoHtml(place.id)}
       <div class="map-place-actions">
         ${point ? `<button class="map-focus-button" type="button" data-focus-place="${esc(place.id || '')}">在地圖查看</button>` : '<span class="map-missing-label">尚未設定座標</span>'}
         ${external ? `<a class="map-link" href="${esc(external)}" target="_blank" rel="noopener noreferrer">Google Maps ↗</a>` : ''}
@@ -159,7 +161,8 @@
       try {
         const [places, itinerary] = await Promise.all([
           api('places', {}, force),
-          api('itinerary', { group: groupParam() }, force)
+          api('itinerary', { group: groupParam() }, force),
+          window.TRAVEL_PLANNER_PLACE_MEMOS ? window.TRAVEL_PLANNER_PLACE_MEMOS.load(force) : Promise.resolve([])
         ]);
         const usedIds = new Set(itinerary.map(i => i.place_id).filter(Boolean));
         const sorted = [...places].sort((a, b) =>
