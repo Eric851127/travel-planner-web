@@ -101,18 +101,19 @@ Documentation:
 
 ### `apps-script/admin-backend/`
 
-Purpose: protected Admin auth/write backend source snapshots.
+Purpose: protected Admin authentication and write backend.
 
-Canonical deployed modules:
+Canonical current source set:
+- `Code.gs` — verified live P9 OAuth/session root
 - `Router.gs`
 - `Validators.gs`
 - `Gate.gs`
 - `PlaceMemos.gs`
 
-Historical/incomplete root snapshot:
-- `Code.branch-base.gs`
+Historical root snapshot:
+- `snapshots/Code.branch-base.gs`
 
-The full live production root P9 `Code.gs` is not yet committed verbatim.
+The historical snapshot predates the production `admin_api` route and is not current source-of-truth.
 
 ### `apps-script/admin/`
 
@@ -149,7 +150,7 @@ Files in `docs/history/` are retained for audit and rollback context only. They 
 ### Admin
 - `admin.html` performs string-patch composition over `admin-p11.html`
 - large single-file Admin UI
-- full production P9 root `Code.gs` is not committed verbatim
+- manual Apps Script deployment can drift from GitHub if not synchronized
 
 ### Repository
 - historical P* filenames mix production runtime and diagnostics
