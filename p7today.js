@@ -1,8 +1,6 @@
 /* P7.8 itinerary-first Today experience + P15.3 flight cards */
 (function () {
   const GROUP_KEY = 'travelPlanner.group.v1';
-  const MAP_SETTINGS_KEY = 'travelPlanner.googleMaps.v1';
-  let mapsPromise = null;
   let todayMap = null;
   let todayInfo = null;
 
@@ -41,57 +39,10 @@
     });
   }
 
-  function mapSettings() {
-    const fixed = window.TRAVEL_PLANNER_MAP_CONFIG || {};
-    if (fixed.apiKey && fixed.mapId) return fixed;
-    try {
-      const saved = JSON.parse(localStorage.getItem(MAP_SETTINGS_KEY) || '{}');
-      return { apiKey: String(saved.apiKey || '').trim(), mapId: String(saved.mapId || '').trim() };
-    } catch (_) {
-      return { apiKey: '', mapId: '' };
-    }
-  }
-
-  function loadGoogleMaps(apiKey) {
-    if (window.google?.maps?.importLibrary) return Promise.resolve(window.google.maps);
-    if (mapsPromise) return mapsPromise;
-    mapsPromise = new Promise((resolve, reject) => {
-      const script = document.createElement('script');
-      const url = new URL('https://maps.googleapis.com/maps/api/js');
-      url.searchParams.set('key', apiKey);
-      url.searchParams.set('v', 'weekly');
-      url.searchParams.set('loading', 'async');
-      script.src = url.toString();
-      script.async = true;
-      script.defer = true;
-      script.onload = () => window.google?.maps ? resolve(window.google.maps) : reject(new Error('Google Maps 未初始化'));
-      script.onerror = () => reject(new Error('Google Maps 載入失敗'));
-      document.head.appendChild(script);
-    }).catch(error => {
-      mapsPromise = null;
-      throw error;
-    });
-    return mapsPromise;
-  }
-
-  function coord(place) {
-    const lat = Number(place?.latitude), lng = Number(place?.longitude);
-    if (!Number.isFinite(lat) || !Number.isFinite(lng)) return null;
-    if (lat < -90 || lat > 90 || lng < -180 || lng > 180) return null;
-    return { lat, lng };
-  }
-
-  function directionsUrl(from, to, mode = 'transit') {
-    const origin = coord(from) ? `${from.latitude},${from.longitude}` : [from?.name, from?.address, from?.city].filter(Boolean).join(' ');
-    const destination = coord(to) ? `${to.latitude},${to.longitude}` : [to?.name, to?.address, to?.city].filter(Boolean).join(' ');
-    if (!origin || !destination) return '';
-    const url = new URL('https://www.google.com/maps/dir/');
-    url.searchParams.set('api', '1');
-    url.searchParams.set('origin', origin);
-    url.searchParams.set('destination', destination);
-    url.searchParams.set('travelmode', mode);
-    return url.toString();
-  }
+  function mapSettings() { return window.TRAVEL_PLANNER_MAPS.readSettings(); }
+  function loadGoogleMaps(apiKey) { return window.TRAVEL_PLANNER_MAPS.load(apiKey); }
+  function coord(place) { return window.TRAVEL_PLANNER_MAPS.coordinates(place); }
+  function directionsUrl(from, to, mode = 'transit') { return window.TRAVEL_PLANNER_MAPS.directionsUrl(from, to, mode); }
 
   function transportMode(type) {
     return type === 'rental_car' ? 'driving' : 'transit';
