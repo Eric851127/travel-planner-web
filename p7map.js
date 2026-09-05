@@ -1,83 +1,15 @@
 /* P7.3 interactive Google Map */
 (function () {
-  const MAP_SETTINGS_KEY = 'travelPlanner.googleMaps.v1';
-  let mapsPromise = null;
   let mapInstance = null;
   let infoWindow = null;
   let markerByPlaceId = new Map();
 
-  function readMapSettings() {
-    const fixed = window.TRAVEL_PLANNER_MAP_CONFIG || {};
-    if (fixed.apiKey && fixed.mapId) return fixed;
-    try {
-      const saved = JSON.parse(localStorage.getItem(MAP_SETTINGS_KEY) || '{}');
-      return {
-        apiKey: String(saved.apiKey || '').trim(),
-        mapId: String(saved.mapId || '').trim()
-      };
-    } catch (_) {
-      return { apiKey: '', mapId: '' };
-    }
-  }
-
-  function saveMapSettings(apiKey, mapId) {
-    localStorage.setItem(MAP_SETTINGS_KEY, JSON.stringify({ apiKey, mapId }));
-  }
-
-  function clearMapSettings() {
-    localStorage.removeItem(MAP_SETTINGS_KEY);
-    mapsPromise = null;
-  }
-
-  function loadGoogleMaps(apiKey) {
-    if (window.google && window.google.maps && window.google.maps.importLibrary) {
-      return Promise.resolve(window.google.maps);
-    }
-    if (mapsPromise) return mapsPromise;
-
-    mapsPromise = new Promise((resolve, reject) => {
-      const script = document.createElement('script');
-      const url = new URL('https://maps.googleapis.com/maps/api/js');
-      url.searchParams.set('key', apiKey);
-      url.searchParams.set('v', 'weekly');
-      url.searchParams.set('loading', 'async');
-      script.src = url.toString();
-      script.async = true;
-      script.defer = true;
-      script.onload = () => {
-        if (window.google && window.google.maps) resolve(window.google.maps);
-        else reject(new Error('Google Maps 載入完成但 API 未初始化'));
-      };
-      script.onerror = () => reject(new Error('Google Maps JavaScript API 載入失敗'));
-      document.head.appendChild(script);
-    }).catch(error => {
-      mapsPromise = null;
-      throw error;
-    });
-
-    return mapsPromise;
-  }
-
-  function numberOrNull(value) {
-    if (value === '' || value === null || value === undefined) return null;
-    const n = Number(value);
-    return Number.isFinite(n) ? n : null;
-  }
-
-  function coordinates(place) {
-    const lat = numberOrNull(place.latitude);
-    const lng = numberOrNull(place.longitude);
-    if (lat === null || lng === null) return null;
-    if (lat < -90 || lat > 90 || lng < -180 || lng > 180) return null;
-    return { lat, lng };
-  }
-
-  function googleMapsUrl(place) {
-    const direct = safeUrl(place.google_maps_url);
-    if (direct) return direct;
-    const query = [place.name, place.address, place.city].filter(Boolean).join(' ');
-    return query ? 'https://www.google.com/maps/search/?api=1&query=' + encodeURIComponent(query) : '';
-  }
+  function readMapSettings() { return window.TRAVEL_PLANNER_MAPS.readSettings(); }
+  function saveMapSettings(apiKey, mapId) { return window.TRAVEL_PLANNER_MAPS.saveSettings(apiKey, mapId); }
+  function clearMapSettings() { return window.TRAVEL_PLANNER_MAPS.clearSettings(); }
+  function loadGoogleMaps(apiKey) { return window.TRAVEL_PLANNER_MAPS.load(apiKey); }
+  function coordinates(place) { return window.TRAVEL_PLANNER_MAPS.coordinates(place); }
+  function googleMapsUrl(place) { return window.TRAVEL_PLANNER_MAPS.placeSearchUrl(place); }
 
   function mapSetupCard() {
     return `<section class="stack">
