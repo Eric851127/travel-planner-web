@@ -23,13 +23,19 @@ It includes:
 - members
 - P15.1 `traveler_bootstrap`
 
-## Historical snapshot
+## Historical snapshots
 
-`Code.current-production.gs` is retained only as an older comparison/rollback snapshot from before the current P14/P15 public API state.
+Historical source snapshots live under:
 
-Despite its filename, it is **not** the current source-of-truth.
+`snapshots/`
 
-Do not deploy it over the live project unless performing an explicit rollback with a known target version.
+Current archived snapshot:
+
+`snapshots/Code.pre-p15-bootstrap.gs`
+
+This file is the exact historical blob previously stored as `Code.current-production.gs`. It includes the public PlaceMemos read behavior but predates P15.1 `traveler_bootstrap`.
+
+It is **not** the current source-of-truth and must not be deployed over the live project unless performing an explicit rollback to that known version.
 
 ## Rules
 
