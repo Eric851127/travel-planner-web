@@ -1,13 +1,12 @@
 # Travel Planner — Current Project Status
 
 Last synchronized: 2026-09-05
-GitHub `main` baseline at sync: `b589227e3f7e2522db753138261772ed2c2ce7f4`
 
-This document is the current source-of-truth snapshot for continuing the project. When branch notes, old PRs, or prior chat assumptions conflict with this file, verify against GitHub `main` and the two live Apps Script projects before changing production.
+This document is the current project source-of-truth. When old branches, PRs, or chat history conflict with this file, verify against GitHub `main` and the two live Apps Script projects.
 
 ## 1. Production architecture
 
-There are **two separate Google Apps Script Web Apps**.
+There are two separate Google Apps Script Web Apps.
 
 ### A. `Travel Planner P9 Auth PoC`
 
@@ -16,45 +15,70 @@ Purpose: protected Admin authentication and writes.
 Responsibilities:
 - Google OAuth / P9 authentication
 - signed Travel Planner session
-- session check / logout / revoke behavior
-- Members authorization and admin access re-check
+- session check / logout / revoke
+- Members authorization and admin re-check
 - P10 protected Admin API
-- Admin CRUD for itinerary, reservations, hotels, flights, transport, places
+- CRUD for itinerary, reservations, hotels, flights, transport, places
 - P14 PlaceMemos Admin CRUD
 
-This is the endpoint used by the Admin UI.
-
-Do **not** use this endpoint as the Traveler public read API.
-
-Production endpoint currently used by Admin:
+Admin production endpoint:
 `https://script.google.com/macros/s/AKfycbzpBT-CqGtHiFtY9mb_p_diNNs46GC4h7ks-gKCMKHG-bSE6xWE_Q5Vc0eAkET4kpsS/exec`
+
+This endpoint is not the Traveler public read API.
 
 ### B. `Travel Planner`
 
-Purpose: anonymous/public read-only API for the Traveler UI.
+Purpose: anonymous/public read-only API for Traveler.
 
 Responsibilities:
-- GET / JSON / JSONP reads
+- GET / JSON / JSONP
+- read-only Google Sheet access
 - resource allowlist
 - filtering / sorting
 - public field whitelist
-- no write API
 
-The Traveler UI stores this endpoint in:
+Traveler stores this endpoint in:
 `travelPlanner.apiBase.v1`
 
-The current live `Travel Planner` Apps Script is a single `Code.gs` and currently exposes:
+Current public resources include:
 - itinerary
 - hotels
 - flights
 - transport
 - reservations
 - places
+- place_memos
 - members
 
-P14.3 requires adding `place_memos` here. This public API change is **pending deployment at the time of this sync**.
+`place_memos` is now deployed in production and confirmed visible in Traveler.
 
-## 2. Google Sheet
+## 2. GitHub canonical Apps Script source
+
+Canonical source map:
+`docs/APPS_SCRIPT_SOURCE_MAP.md`
+
+Current source layout:
+
+- `apps-script/admin-backend/`
+  - corresponds to `Travel Planner P9 Auth PoC`
+  - `Router.gs`
+  - `Validators.gs`
+  - `Gate.gs`
+  - `PlaceMemos.gs`
+  - `Code.branch-base.gs` is retained only as a branch-base snapshot because it is older than the current live P9 entry-point routing
+
+- `apps-script/traveler-public-api/`
+  - corresponds to `Travel Planner`
+  - `Code.gs` is the canonical current public API source
+  - `Code.current-production.gs` is synchronized with the P14.3 PlaceMemos public-read implementation
+
+- `apps-script/admin/`
+  - legacy rollback only
+  - not the current Admin backend
+
+Feature branches are historical/change branches only. They must not be treated as production source-of-truth.
+
+## 3. Google Sheet
 
 Spreadsheet ID:
 `1wk_rVY8cgJbmS1PJBIP95Z_CGnz2a-QQjTVA1xqLIh8`
@@ -93,60 +117,51 @@ Enums:
 - active: TRUE/FALSE
 
 Model rule:
-- Place is the parent entity.
-- Memo is attached to a concrete Place.
-- Memo does not create a map pin.
-- Do not invent broad city/area Places only to attach wishlist notes.
+- Place is the parent entity
+- Memo attaches to a concrete Place
+- Memo does not create a map pin
+- Do not invent broad city/area Places only to attach wishlist notes
 
-## 3. GitHub Pages / main
+## 4. GitHub Pages
 
 Repository:
 `Eric851127/travel-planner-web`
 
-Production Traveler:
+Traveler:
 `https://eric851127.github.io/travel-planner-web/`
 
-Production Admin:
+Admin:
 `https://eric851127.github.io/travel-planner-web/admin.html`
 
 GitHub Pages publishes from `main`.
 
-At this sync, `main` includes:
-- `admin.html`
-- `admin-p11.html`
-- `p14-place-memos-admin.js`
-- `p14-place-memos-traveler.js`
+Important current frontend files:
 - `index.html`
 - `app.js`
 - `p7today.js`
 - `p7map.js`
+- `p14-place-memos-traveler.js`
+- `admin.html`
+- `admin-p11.html`
+- `p14-place-memos-admin.js`
 - `sw.js`
-- `docs/P14_PLACE_MEMOS.md`
 
-### Admin wrapper technical debt
-
-`admin.html` still performs runtime fetch/patch of `admin-p11.html` and then injects additional behavior.
-
-P14 Admin memo UI is loaded as an additional module.
-
-Do not consolidate/refactor Admin while P14 is still being validated.
-
-## 4. P9–P13 status
+## 5. Migration status
 
 - P9 Authentication: PASS
-- P10 Admin protected CRUD: PASS
+- P10 protected Admin CRUD: PASS
 - P11 Admin UI: PASS
 - P12 Traveler → Admin edit mode: PASS
 - P13.1 clean-storage login / endpoint recovery: PASS
-- P13.2 Traveler ↔ Admin navigation and session reuse: PASS
+- P13.2 Traveler ↔ Admin navigation/session reuse: PASS
 - Safari: PASS
 - installed PWA: PASS
 
-Important auth rule:
-- do not restore a pre-login forced endpoint write in `admin.html`
+Important auth rules:
+- do not restore pre-login forced endpoint writes in `admin.html`
 - `p9-auth-poc.html` remains the OAuth callback
 
-## 5. P14 status
+## 6. P14 status
 
 ### P14.1 — PlaceMemo Data Model
 Status: **PASS**
@@ -154,143 +169,72 @@ Status: **PASS**
 Completed:
 - `PlaceMemos` Sheet created
 - `_Schema` updated
-- enum validation applied
-- data model documented in `docs/P14_PLACE_MEMOS.md`
+- validation applied
+- documented in `docs/P14_PLACE_MEMOS.md`
 
 ### P14.2 — Admin Place Memo Editing
 Status: **PASS**
 
 Completed:
-- protected PlaceMemo CRUD is deployed in `Travel Planner P9 Auth PoC`
-- Admin Place editor shows child memo section
+- protected PlaceMemo CRUD deployed in `Travel Planner P9 Auth PoC`
+- Place editor has child memo section
 - no seventh top-level Admin tab
-- create / reopen / edit / reopen / delete smoke test: PASS
-- Place deletion is designed to be blocked while memos still reference it
+- create / reopen / edit / reopen / delete smoke test PASS
+- Place deletion has memo dependency protection in P14 backend design
 
-Traveler/Pages Admin UI implementation in main:
-- `p14-place-memos-admin.js`
+Frontend implementation:
+`p14-place-memos-admin.js`
 
 ### P14.3 — Traveler Memo Rendering
-Status: **FRONTEND DEPLOYED / PUBLIC API PENDING**
+Status: **PASS**
 
-GitHub Pages frontend is already in `main`:
-- `p14-place-memos-traveler.js`
-- `index.html` loads the module
-- `sw.js` caches the module
+Completed:
+- Traveler public API `place_memos` deployed in `Travel Planner`
+- production Traveler successfully displays newly created memo
+- public read uses `config.apiBase`, not the Admin endpoint
+- active memos are publicly readable
+- inactive memos are filtered out by public API logic
+- `sort_order` is normalized numerically and used for memo ordering
+- Traveler displays memo beneath/in the corresponding Place
+- memo creates no map pin
+- frontend remains fail-soft if memo API becomes unavailable
 
-Intended rendering:
-- Today: memo under itinerary Place
-- Trip: memo under Place
-- Map: memo inside Place card
-- icons: 🍴 food, 🛍 shopping, 📝 note, ⏰ reservation
-- sort by `sort_order`
-- no new map pin
-- fail-soft: if memo API is unavailable, existing Traveler views continue without memo rows
+Traveler memo icons:
+- food: 🍴
+- shopping: 🛍
+- note: 📝
+- reservation: ⏰
 
-Important correction:
-- Traveler must read `place_memos` from the **public `Travel Planner` Apps Script** (`config.apiBase`).
-- Traveler must **not** read public memos from `Travel Planner P9 Auth PoC`.
+Canonical public API source:
+`apps-script/traveler-public-api/Code.gs`
 
-The main frontend was corrected for this architecture in commit:
-`b589227e3f7e2522db753138261772ed2c2ce7f4`
+Traveler rendering module:
+`p14-place-memos-traveler.js`
 
-## 6. Pending production task: public `place_memos` resource
+## 7. Important branch / PR history
 
-Modify only the `Travel Planner` public read-only Apps Script `Code.gs`.
+- PR #1: old rollback path, closed/not merged
+- PR #3: P14.2 Admin PlaceMemos UI, merged to main
+- PR #4: P14.3 Traveler PlaceMemo rendering, merged to main
+- `p10-admin-api`: historical backend development branch
+- `p14-place-memos-backend`: historical P14 backend branch
 
-Required changes:
+Do not infer production state solely from those branches.
 
-1. Add resource mapping:
-```js
-place_memos: 'PlaceMemos'
-```
+## 8. Technical debt intentionally deferred
 
-2. Add public fields:
-```js
-place_memos: [
-  'id','place_id','type','title','note','priority','active','sort_order'
-]
-```
-
-3. Add allowed filters:
-```js
-place_memos: ['id','place_id','type','priority','active']
-```
-
-4. Public reads must hide inactive rows by default:
-```js
-if (resource === 'place_memos') {
-  rows = rows.filter(function(row) {
-    return row.active === true;
-  });
-}
-```
-
-5. Sort memos by:
-- `place_id`
-- `sort_order`
-- `title`
-- `id`
-
-6. Treat `sort_order` as numeric in `normalizeValue_()`.
-
-After editing, create a new deployment version for the **Travel Planner** public API only.
-
-Do not redeploy the Admin P9/P10 project for this step unless its code also changed.
-
-## 7. P14.3 validation after public API deploy
-
-First test the public API directly:
-
-- `/exec/place_memos`
-- fallback `/exec?resource=place_memos`
-
-Expected:
-- `success: true`
-- active PlaceMemo rows returned
-- `active=false` rows are not returned
-- JSONP callback still works
-
-Then test Traveler:
-- Today shows memo under the correct Place
-- Map Place card shows memo
-- Trip view, when reachable in current UI, shows memo
-- `sort_order` is respected
-- no memo creates a new map marker
-- refresh retrieves newest memo data
-- Safari / installed PWA remain functional
-
-Only after this passes should P14.3 be marked PASS.
-
-## 8. Important branches / PR history
-
-Relevant merged frontend PRs:
-- PR #3: P14.2 Admin PlaceMemos UI → merged to main
-- PR #4: P14.3 Traveler PlaceMemo rendering → merged to main
-
-Relevant Apps Script source branch:
-- `p10-admin-api`: historical/current P10 source baseline
-- `p14-place-memos-backend`: P14 Admin backend source work
-
-Important: these backend branch files are **not equivalent to GitHub main production source-of-truth** because Apps Script is currently manually synchronized/deployed. Always verify the live Apps Script project before backend edits.
-
-## 9. Do not mix into P14 validation
-
-Do not currently:
+Do not mix these into P14 completion:
 - consolidate `admin.html` and `admin-p11.html`
-- split all JS/CSS
+- split large JS/CSS files
 - replace framework/stack
 - move to React/Firebase/Supabase
 - change OAuth callback URI
 - delete `p9-auth-poc.html`
-- merge old rollback PR #1
-- modify Members/session format unless required for a separate phase
-- delete legacy Admin rollback files
+- delete legacy rollback files
+- modify Members/session format without a dedicated migration
 
-Those are later cleanup tasks after P14 PASS.
+## 9. Current milestone
 
-## 10. Immediate next action
+**P14 is complete through P14.3.**
 
-Current next action is exactly one thing:
-
-**Update and redeploy the public `Travel Planner` Apps Script to expose active `place_memos`, then validate P14.3 on the production Traveler.**
+The next product step can now move beyond infrastructure validation, including adding the normalized wishlist Place/Memo data and later cleanup/refactoring as a separate phase.
