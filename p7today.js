@@ -28,14 +28,18 @@
   }
 
   function bindTodayGroupFilters() {
+    if (window.TRAVEL_PLANNER_INTERACTIONS) {
+      window.TRAVEL_PLANNER_INTERACTIONS.bindTodayGroupFilters();
+      return;
+    }
     document.querySelectorAll('[data-today-group]').forEach(button => {
-      button.addEventListener('click', () => {
+      button.onclick = () => {
         const next = button.dataset.todayGroup;
         if (next !== 'ours' && next !== 'friends') return;
         state.group = next;
         localStorage.setItem(GROUP_KEY, next);
         renderToday(false).catch(failed);
-      });
+      };
     });
   }
 
