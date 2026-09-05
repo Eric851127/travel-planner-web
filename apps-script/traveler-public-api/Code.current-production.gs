@@ -10,9 +10,11 @@ const CONFIG = {
     transport: 'Transport',
     reservations: 'Reservations',
     places: 'Places',
+    place_memos: 'PlaceMemos',
     members: 'Members'
   }
 };
+
 
 /* =========================================================
  * P3.4 PUBLIC API FIELD WHITELIST
@@ -42,6 +44,9 @@ const PUBLIC_FIELDS = {
   places: [
     'id','name','city','category','address','google_maps_url','latitude','longitude',
     'opening_hours','website'
+  ],
+  place_memos: [
+    'id','place_id','type','title','note','priority','active','sort_order'
   ],
   members: [
     'id','name','group','role','active'
@@ -91,6 +96,9 @@ function doGet(e) {
       request.resource
     );
 
+    // P3.4:
+    // Filter/sort may use the complete internal row,
+    // but only whitelisted fields are returned publicly.
     const publicRows = projectPublicFields_(
       request.resource,
       sorted
@@ -117,6 +125,7 @@ function doGet(e) {
     );
   }
 }
+
 
 /* =========================================================
  * REQUEST
@@ -165,6 +174,7 @@ function normalizeRequest_(e) {
     callback: callback
   };
 }
+
 
 /* =========================================================
  * SHEET READER
@@ -232,6 +242,7 @@ function readResource_(resource) {
     });
 }
 
+
 function validateHeaders_(headers, sheetName) {
   if (!headers.length || headers[0] !== 'id') {
     throw new Error(
@@ -263,6 +274,7 @@ function validateHeaders_(headers, sheetName) {
   });
 }
 
+
 /* =========================================================
  * VALUE NORMALIZATION
  * ========================================================= */
@@ -281,7 +293,8 @@ function normalizeValue_(resource, field, value) {
   if (
     field === 'day' ||
     field === 'order' ||
-    field === 'price'
+    field === 'price' ||
+    field === 'sort_order'
   ) {
     const numberValue = Number(
       raw.replace(/,/g, '')
@@ -301,6 +314,7 @@ function normalizeValue_(resource, field, value) {
 
   return raw;
 }
+
 
 function parseBoolean_(value) {
   const normalized = String(value)
@@ -326,11 +340,18 @@ function parseBoolean_(value) {
   return value;
 }
 
+
 /* =========================================================
  * FILTERS
  * ========================================================= */
 
 function filterRows_(rows, resource, params) {
+  if (resource === 'place_memos') {
+    rows = rows.filter(function(row) {
+      return row.active === true;
+    });
+  }
+
   const allowedFilters = {
     itinerary: [
       'id',
@@ -384,6 +405,14 @@ function filterRows_(rows, resource, params) {
       'category'
     ],
 
+    place_memos: [
+      'id',
+      'place_id',
+      'type',
+      'priority',
+      'active'
+    ],
+
     members: [
       'id',
       'group',
@@ -435,6 +464,7 @@ function filterRows_(rows, resource, params) {
   });
 }
 
+
 function normalizeCompareValue_(value) {
   if (value === true) return 'true';
   if (value === false) return 'false';
@@ -450,6 +480,7 @@ function normalizeCompareValue_(value) {
     .trim()
     .toLowerCase();
 }
+
 
 /* =========================================================
  * SORTING
@@ -502,6 +533,13 @@ function sortRows_(rows, resource) {
         compareValues_(a.id, b.id);
     }
 
+    if (resource === 'place_memos') {
+      return compareValues_(a.place_id, b.place_id) ||
+        compareValues_(a.sort_order, b.sort_order) ||
+        compareValues_(a.title, b.title) ||
+        compareValues_(a.id, b.id);
+    }
+
     if (resource === 'members') {
       return compareValues_(a.group, b.group) ||
         compareValues_(a.name, b.name) ||
@@ -513,6 +551,7 @@ function sortRows_(rows, resource) {
 
   return output;
 }
+
 
 function compareValues_(a, b) {
   if (a === b) return 0;
@@ -550,6 +589,7 @@ function compareValues_(a, b) {
   );
 }
 
+
 /* =========================================================
  * P3.4 PUBLIC PROJECTION
  * ========================================================= */
@@ -578,6 +618,7 @@ function projectPublicFields_(resource, rows) {
   });
 }
 
+
 /* =========================================================
  * RESPONSE
  * ========================================================= */
@@ -591,9 +632,11 @@ function buildMeta_(startedAt, count, request) {
   };
 }
 
+
 function jsonResponse_(payload, request) {
   const json = JSON.stringify(payload);
 
+  // JSONP support for GitHub Pages
   if (request && request.callback) {
     if (
       !/^[A-Za-z_$][0-9A-Za-z_$]*$/
@@ -633,6 +676,7 @@ function jsonResponse_(payload, request) {
     );
 }
 
+
 function errorResponse_(
   code,
   message,
@@ -658,6 +702,7 @@ function errorResponse_(
     )
   }, request);
 }
+
 
 /* =========================================================
  * SMOKE TESTS
@@ -724,8 +769,27 @@ function testApi_() {
     )
   );
 
+  const placeMemos = filterRows_(
+    readResource_('place_memos'),
+    'place_memos',
+    {}
+  );
+
+  Logger.log('Active PlaceMemos:');
+  Logger.log(
+    JSON.stringify(
+      projectPublicFields_(
+        'place_memos',
+        sortRows_(placeMemos, 'place_memos')
+      ),
+      null,
+      2
+    )
+  );
+
   testPublicFieldSecurity_();
 }
+
 
 function testPublicFieldSecurity_() {
   const hotels = projectPublicFields_(
@@ -773,6 +837,7 @@ function testPublicFieldSecurity_() {
     'P3.4 public field security tests: PASS'
   );
 }
+
 
 function assertNoField_(rows, field) {
   rows.forEach(function(row) {
