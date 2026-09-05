@@ -86,6 +86,9 @@ For the current cleanup phase, diagnostics-only files remain at their existing r
 
 ## 4. Apps Script source directories
 
+Top-level guide:
+- `apps-script/README.md`
+
 ### `apps-script/traveler-public-api/`
 
 Purpose: anonymous Traveler read-only API.
@@ -93,8 +96,10 @@ Purpose: anonymous Traveler read-only API.
 Canonical current source:
 - `Code.gs`
 
-Historical comparison snapshot:
-- `Code.current-production.gs`
+Historical snapshots:
+- `snapshots/Code.pre-p15-bootstrap.gs`
+
+The old misleading filename `Code.current-production.gs` has been retired. The archived snapshot is the exact same historical blob, only relocated under `snapshots/` with a version-meaningful name.
 
 Documentation:
 - `README.md`
@@ -128,6 +133,7 @@ Current authority documents:
 - `docs/APPS_SCRIPT_SOURCE_MAP.md` — backend source authority and deployment boundaries
 - `docs/MAIN_BRANCH_MAP.md` — runtime file classification
 - `docs/DIAGNOSTICS.md` — root support/diagnostic page classification
+- `apps-script/README.md` — Apps Script directory roles
 
 Historical implementation documents may remain for migration context but do not override the authority documents above.
 
@@ -150,7 +156,7 @@ Historical implementation documents may remain for migration context but do not 
 - `p9-auth-poc.html` has a misleading historical filename but is production-required
 - diagnostics-only pages remain in root to preserve compatibility during cleanup
 - historical docs may describe earlier phase state
-- snapshot filenames can be confused with canonical production source
+- Admin root backend source is not yet fully mirrored verbatim in GitHub
 
 ## 7. Safe cleanup policy
 
