@@ -252,7 +252,7 @@
     state.group = localStorage.getItem(GROUP_KEY) === 'friends' ? 'friends' : 'ours';
     state.view = 'today';
     document.querySelectorAll('.nav-item').forEach(item => item.classList.toggle('active', item.dataset.view === 'today'));
-    renderCurrent(false);
+    if (!window.TRAVEL_PLANNER_DEFER_INITIAL_RENDER) renderCurrent(false);
   } catch (error) {
     console.error('P7.8 patch failed', error);
   }
