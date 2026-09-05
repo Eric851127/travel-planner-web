@@ -25,14 +25,16 @@
   var showAuthReplacement="$('adminPanel').hidden=true;$('addBtn').hidden=true;$('travelerBtn').hidden=true;$('logoutBtn').hidden=!token();";
   var loadMarker="$('authPanel').innerHTML='';$('adminPanel').hidden=false;$('addBtn').hidden=false;$('logoutBtn').hidden=false;";
   var loadReplacement="$('authPanel').innerHTML='';$('adminPanel').hidden=false;$('addBtn').hidden=false;$('travelerBtn').hidden=false;$('logoutBtn').hidden=false;";
+  var bootstrapMarker="var d=await adminApi('bootstrap');MODES.forEach(function(m){state[m]=Array.isArray(d[m])?d[m]:[]});state.members=Array.isArray(d.members)?d.members:[];state.currentAdmin=d.current_admin||null;state.enums=d.enums||{};";
+  var bootstrapReplacement=bootstrapMarker+"window.TRAVEL_PLANNER_ADMIN_BOOTSTRAP=d;window.dispatchEvent(new Event('travel-planner-admin-bootstrap'));";
   var bodyMarker='</body>';
-  var adminModules='<script src="p14-place-memos-admin.js"><\/script><script src="p16-admin-places-ux.js?v=p16-3-20260905-1"><\/script><script src="p16-admin-mobility-detail.js?v=p16-3-20260905-1"><\/script></body>';
+  var adminModules='<script src="p14-place-memos-admin.js"><\/script><script src="p16-admin-places-ux.js?v=p16-3-20260905-1"><\/script><script src="p16-admin-mobility-detail.js?v=p16-3-1-20260905-1"><\/script></body>';
 
   fetch('admin-p11.html',{cache:'no-store'})
     .then(function(response){if(!response.ok)throw new Error('ADMIN_LOAD_FAILED');return response.text();})
     .then(function(html){
-      if(html.indexOf(marker)<0||html.indexOf(showAuthMarker)<0||html.indexOf(loadMarker)<0||html.indexOf(bodyMarker)<0)throw new Error('ADMIN_PATCH_MARKER_NOT_FOUND');
-      html=html.replace(marker,replacement).replace(showAuthMarker,showAuthReplacement).replace(loadMarker,loadReplacement).replace(bodyMarker,adminModules);
+      if(html.indexOf(marker)<0||html.indexOf(showAuthMarker)<0||html.indexOf(loadMarker)<0||html.indexOf(bootstrapMarker)<0||html.indexOf(bodyMarker)<0)throw new Error('ADMIN_PATCH_MARKER_NOT_FOUND');
+      html=html.replace(marker,replacement).replace(showAuthMarker,showAuthReplacement).replace(loadMarker,loadReplacement).replace(bootstrapMarker,bootstrapReplacement).replace(bodyMarker,adminModules);
       document.open();
       document.write(html);
       document.close();
