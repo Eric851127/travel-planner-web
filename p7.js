@@ -1,4 +1,4 @@
-/* P7.2 smart default date + P7.4 group display labels */
+/* Traveler smart-date + group display helpers. Runtime core ownership lives in p16-runtime-core.js. */
 (function () {
   function localIsoDate() {
     const now = new Date();
@@ -18,7 +18,6 @@
   window.travelPlannerSmartTripDate = smartTripDate;
   window.travelPlannerGroupLabel = value => ({all:'全部', ours:'郭小鼠組', friends:'阿香組'}[value] || value || '');
 
-  // Keep internal enum values unchanged. P7.4 is display-only.
   function relabel(root) {
     if (!root) return;
     const walker = document.createTreeWalker(root, NodeFilter.SHOW_TEXT);
@@ -36,31 +35,4 @@
     if (node.nodeType === Node.TEXT_NODE) relabel(node.parentNode);
     else if (node.nodeType === Node.ELEMENT_NODE) relabel(node);
   }))).observe(document.body, {childList:true, subtree:true});
-
-  // Replace the old hard-coded default-date behavior after app.js is loaded.
-  try {
-    ensureDates = async function (force = false) {
-      const items = await api('itinerary', {}, force);
-      state.dates = [...new Set(items.map(i => i.date).filter(Boolean))].sort();
-      if (!state.dates.length) return;
-      if (state.__dateSelectedByUser && state.date && state.dates.includes(state.date)) return;
-      state.date = smartTripDate(state.dates);
-    };
-
-    const oldBindDateControls = bindDateControls;
-    bindDateControls = function () {
-      oldBindDateControls();
-      const select = document.getElementById('dateSelect');
-      if (select) select.addEventListener('change', () => { state.__dateSelectedByUser = true; });
-      document.querySelectorAll('[data-date]').forEach(button => button.addEventListener('click', () => {
-        if (button.dataset.date) state.__dateSelectedByUser = true;
-      }));
-    };
-
-    state.date = null;
-    state.cache.clear();
-    if (!window.TRAVEL_PLANNER_DEFER_INITIAL_RENDER) renderCurrent(true);
-  } catch (error) {
-    console.error('P7 patch failed', error);
-  }
 })();
