@@ -33,6 +33,9 @@ function doGet(e) {
     if (request.resource === 'health') {
       return jsonResponse_({success:true,data:{status:'ok',api_version:CONFIG.API_VERSION},meta:buildMeta_(startedAt,1,request)},request);
     }
+    if (request.resource === 'traveler_bootstrap') {
+      return jsonResponse_({success:true,data:travelerBootstrap_(request.params),meta:buildMeta_(startedAt,1,request)},request);
+    }
     if (!CONFIG.RESOURCES[request.resource]) {
       return errorResponse_('INVALID_RESOURCE','Unknown resource: '+request.resource,startedAt,request);
     }
@@ -44,6 +47,40 @@ function doGet(e) {
   } catch (err) {
     return errorResponse_('INTERNAL_ERROR',err&&err.message?err.message:String(err),startedAt,normalizeRequest_(e));
   }
+}
+
+function travelerBootstrap_(params) {
+  const ss = SpreadsheetApp.openById(CONFIG.SPREADSHEET_ID);
+  const group = String((params && params.group) || '').trim();
+  const requestedDate = String((params && params.date) || '').trim();
+
+  const itineraryAll = readResourceFromSpreadsheet_(ss,'itinerary');
+  const dates = Array.from(new Set(itineraryAll.map(function(row){return row.date;}).filter(Boolean))).sort();
+  const selectedDate = requestedDate && dates.indexOf(requestedDate) !== -1
+    ? requestedDate
+    : (dates[0] || requestedDate || null);
+
+  function withGroup(extra) {
+    const output = Object.assign({},extra || {});
+    if (group) output.group = group;
+    return output;
+  }
+
+  function publicRows(resource,rows,filters) {
+    return projectPublicFields_(resource,sortRows_(filterRows_(rows,resource,filters || {}),resource));
+  }
+
+  return {
+    bootstrap_version: 'P15.1',
+    dates: dates,
+    selected_date: selectedDate,
+    itinerary: publicRows('itinerary',itineraryAll,withGroup(selectedDate ? {date:selectedDate} : {})),
+    transport: publicRows('transport',readResourceFromSpreadsheet_(ss,'transport'),withGroup(selectedDate ? {date:selectedDate} : {})),
+    hotels: publicRows('hotels',readResourceFromSpreadsheet_(ss,'hotels'),withGroup({})),
+    places: publicRows('places',readResourceFromSpreadsheet_(ss,'places'),{}),
+    flights: publicRows('flights',readResourceFromSpreadsheet_(ss,'flights'),withGroup(selectedDate ? {date:selectedDate} : {})),
+    place_memos: publicRows('place_memos',readResourceFromSpreadsheet_(ss,'place_memos'),{})
+  };
 }
 
 function normalizeRequest_(e) {
@@ -58,9 +95,13 @@ function normalizeRequest_(e) {
 }
 
 function readResource_(resource) {
+  const ss = SpreadsheetApp.openById(CONFIG.SPREADSHEET_ID);
+  return readResourceFromSpreadsheet_(ss,resource);
+}
+
+function readResourceFromSpreadsheet_(ss,resource) {
   const sheetName = CONFIG.RESOURCES[resource];
   if (!sheetName) throw new Error('Sheet mapping not found for resource: '+resource);
-  const ss = SpreadsheetApp.openById(CONFIG.SPREADSHEET_ID);
   const sheet = ss.getSheetByName(sheetName);
   if (!sheet) throw new Error('Sheet not found: '+sheetName);
   const values = sheet.getDataRange().getDisplayValues();
@@ -176,6 +217,8 @@ function testApi_(){
   const placeMemos=filterRows_(readResource_('place_memos'),'place_memos',{});
   Logger.log('Active PlaceMemos:');
   Logger.log(JSON.stringify(projectPublicFields_('place_memos',sortRows_(placeMemos,'place_memos')),null,2));
+  Logger.log('Traveler bootstrap:');
+  Logger.log(JSON.stringify(travelerBootstrap_({group:'ours,all'}),null,2));
   testPublicFieldSecurity_();
 }
 
