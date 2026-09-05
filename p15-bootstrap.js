@@ -6,7 +6,9 @@
   const CACHE_PREFIX = 'travelPlanner.bootstrap.v1.';
   const FRESH_MS = 5 * 60 * 1000;
   const STALE_MAX_MS = 7 * 24 * 60 * 60 * 1000;
+  const FORCE_REUSE_MS = 3000;
   const snapshots = new Map();
+  const snapshotSavedAt = new Map();
   const inFlight = new Map();
   const baseApi = api;
 
@@ -23,6 +25,16 @@
     return CACHE_PREFIX + encodeURIComponent(key);
   }
 
+  function rememberSnapshot(key, data) {
+    snapshots.set(key, data);
+    snapshotSavedAt.set(key, Date.now());
+    if (data && data.selected_date) {
+      const alias = snapshotKey(data.selected_date, key.split('|').slice(1).join('|'));
+      snapshots.set(alias, data);
+      snapshotSavedAt.set(alias, Date.now());
+    }
+  }
+
   function readStored(key) {
     try {
       const raw = localStorage.getItem(storageKey(key));
@@ -34,7 +46,7 @@
         localStorage.removeItem(storageKey(key));
         return null;
       }
-      return { data: parsed.data, age };
+      return { data: parsed.data, age, savedAt: parsed.savedAt };
     } catch (_) {
       return null;
     }
@@ -50,11 +62,12 @@
 
   async function fetchBootstrap(date, group, force) {
     const key = snapshotKey(date, group);
-    if (!force && snapshots.has(key)) return snapshots.get(key);
+    const recentAt = snapshotSavedAt.get(key) || 0;
+    if (snapshots.has(key) && (!force || Date.now() - recentAt <= FORCE_REUSE_MS)) return snapshots.get(key);
 
     const stored = readStored(key);
     if (!force && stored && stored.age <= FRESH_MS) {
-      snapshots.set(key, stored.data);
+      rememberSnapshot(key, stored.data);
       backgroundRefresh(date, group, key);
       return stored.data;
     }
@@ -68,12 +81,12 @@
       try {
         const json = await jsonp(url, 20000);
         if (!json || !json.success || !json.data) throw new Error(json?.error?.message || 'Bootstrap API 發生錯誤');
-        snapshots.set(key, json.data);
+        rememberSnapshot(key, json.data);
         writeStored(key, json.data);
         return json.data;
       } catch (error) {
         if (stored) {
-          snapshots.set(key, stored.data);
+          rememberSnapshot(key, stored.data);
           console.warn('P15.1 bootstrap using stale cache', error);
           return stored.data;
         }
@@ -93,7 +106,7 @@
     const request = jsonp(url, 20000)
       .then(json => {
         if (!json || !json.success || !json.data) return null;
-        snapshots.set(key, json.data);
+        rememberSnapshot(key, json.data);
         writeStored(key, json.data);
         return json.data;
       })
@@ -119,12 +132,6 @@
     return keys.every(key => allowed[resource].includes(key));
   }
 
-  function sameGroup(requested, snapshotGroup) {
-    const value = String(requested || '');
-    if (!value) return true;
-    return value === snapshotGroup;
-  }
-
   function rowsFromSnapshot(snapshot, resource, params) {
     if (!snapshot || !Array.isArray(snapshot[resource])) return null;
     if (resource === 'itinerary' || resource === 'transport' || resource === 'flights') {
@@ -143,18 +150,17 @@
         ? snapshot.selected_date
         : state.dates[0];
     }
+    rememberSnapshot(snapshotKey(state.date, group), snapshot);
   };
 
   api = async function (resource, params = {}, force = false) {
     if (!supportedRequest(resource, params)) return baseApi(resource, params, force);
 
-    const requestedGroup = String(params.group || normalizedGroup() || '');
+    const group = String(params.group || normalizedGroup() || '');
     const requestedDate = String(params.date || state.date || '');
-    const group = requestedGroup || normalizedGroup();
 
     try {
       const snapshot = await fetchBootstrap(requestedDate, group, force);
-      if (!sameGroup(requestedGroup, group)) return baseApi(resource, params, force);
       const rows = rowsFromSnapshot(snapshot, resource, params);
       if (rows !== null) return rows;
     } catch (error) {
@@ -168,6 +174,7 @@
     version: 'P15.1',
     clear: function () {
       snapshots.clear();
+      snapshotSavedAt.clear();
       try {
         Object.keys(localStorage).forEach(key => {
           if (key.indexOf(CACHE_PREFIX) === 0) localStorage.removeItem(key);
