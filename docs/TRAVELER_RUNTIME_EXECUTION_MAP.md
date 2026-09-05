@@ -1,28 +1,26 @@
 # Traveler Runtime Execution Map
 
 Functional regression baseline commit: `55fd670eb4a2baa33e3d09ee12affad6e56c58be`
-Verified against current `main` during cleanup on 2026-09-05.
+Phase A/B/C consolidation verified against `main` on 2026-09-05.
 
-This document records the **actual runtime ownership after all Traveler scripts have loaded**. It exists because historical P-numbered scripts patch and replace shared globals in sequence. File names and phase numbers do not reliably indicate final ownership.
+This document records the current Traveler runtime ownership after the cleanup consolidation.
 
 ## 1. Loader contract
 
-`index.html` dynamically loads scripts sequentially in this exact order:
+`index.html` dynamically loads scripts sequentially in this order:
 
 ```text
 1. app.js
 2. p7network.js
-3. p15-bootstrap.js
-4. p4.js
-5. p7.js
-6. p7maps-shared.js
-7. p7map.js
-8. p7today.js
-9. p8.js
-10. p14-place-memos-traveler.js
+3. p4.js
+4. p7.js
+5. p7maps-shared.js
+6. p7map.js
+7. p7today.js
+8. p8.js
+9. p14-place-memos-traveler.js
+10. p16-runtime-core.js
 ```
-
-`p7maps-shared.js` is a pure shared Maps dependency inserted after `p7.js`. The relative order of the pre-existing production runtime files remains unchanged.
 
 `index.html` sets:
 
@@ -30,68 +28,112 @@ This document records the **actual runtime ownership after all Traveler scripts 
 window.TRAVEL_PLANNER_DEFER_INITIAL_RENDER = true;
 ```
 
-before loading them, then sets it back to `false` and calls:
+before loading runtime files. After all files load it sets the flag to `false` and calls:
 
 ```js
 await renderCurrent(false);
 ```
 
-after all runtime files load.
+`p16-runtime-core.js` is intentionally loaded last so it is the explicit final owner of core runtime functions.
 
-The sequence is therefore part of current production behavior.
-
-## 2. Shared global ownership timeline
+## 2. Core ownership after Phase C
 
 ### `jsonp`
 
-1. `app.js` defines the original JSONP transport.
-2. `p7network.js` replaces it with resilient P7.7 JSONP.
-3. No later script replaces it.
+Owner: `p7network.js`
 
-**Final owner: `p7network.js`.**
+Responsibility:
+- resilient JSONP transport
+- timeout handling
+- callback cleanup
+- cache-busting request marker
+
+`p7network.js` no longer defines resource `api()`.
 
 ### `api`
 
-1. `app.js` defines the original resource API using `config.apiBase + '/' + resource`.
-2. `p7network.js` replaces it with retry + persistent-cache behavior.
-3. `p15-bootstrap.js` captures the P7.7 implementation as `baseApi`, then replaces `api` with the P15 bootstrap adapter.
-4. `p4.js` replaces `api` again with the query-resource implementation using:
-   - `new URL(config.apiBase)`
-   - `resource=<resource>`
-   - group expansion to `<group>,all`
-   - `_ts` cache busting
+Final owner: `p16-runtime-core.js`
 
-No later script replaces `api`.
+Current production request contract remains the previously effective P4 contract:
 
-**Final global owner: `p4.js`.**
+```text
+GET <Apps Script exec URL>?resource=<resource>&...
+```
 
-Important consequence:
+Behavior preserved:
+- group values expand from `ours` / `friends` to `<group>,all`
+- `_ts` request cache busting
+- in-memory `state.cache`
+- JSONP transport through the current global `jsonp`
+- 18-second API-level JSONP timeout request
 
-The P15.1 `api` adapter is **not** the final global `api` in the verified P15.3 load order.
-
-The P15 closure still retains its captured `baseApi` and bootstrap helper functions internally, but ordinary later callers resolving global `api` use the P4 implementation.
+Phase C does not switch production back to the dormant P15 bootstrap adapter.
 
 ### `ensureDates`
 
-1. `app.js` defines the original itinerary-date loader.
-2. `p15-bootstrap.js` replaces it with bootstrap-backed date loading.
-3. `p7.js` replaces it again with smart-trip-date behavior and reads dates via the then-current global `api` at call time.
+Final owner: `p16-runtime-core.js`
 
-No later script replaces `ensureDates`.
+Behavior preserved from the previously effective P7 implementation:
+- read itinerary dates through current `api()`
+- unique + sorted date list
+- preserve a user-selected valid date
+- otherwise select `travelPlannerSmartTripDate(state.dates)`
 
-**Final owner: `p7.js`.**
+### `bindDateControls`
 
-Important consequence:
+Final owner: `p16-runtime-core.js`
 
-The P15.1 bootstrap-backed `ensureDates` is **not** the final implementation in production.
+It uses the original `app.js` binding as its base and adds the existing P7 user-selection marker:
 
-### `TRAVEL_PLANNER_MAPS`
+```text
+state.__dateSelectedByUser = true
+```
 
-`p7maps-shared.js` is the single shared owner for Traveler Google Maps helper behavior:
+No wrapper chain remains.
 
+### `renderCurrent`
+
+Final owner: `p16-runtime-core.js`
+
+It dispatches at call time to:
+- `renderToday`
+- `renderTrip`
+- `renderBookings`
+- `renderMap`
+- `renderMore`
+
+It retains the existing retry UI and clears `state.cache` before a forced retry. It also clears the PlaceMemo runtime cache when available.
+
+## 3. Renderer ownership
+
+```text
+renderToday     -> p7today.js
+renderTrip      -> p14-place-memos-traveler.js
+renderBookings  -> p4.js
+renderMap       -> p7map.js
+renderMore      -> p8.js
+renderCurrent   -> p16-runtime-core.js
+```
+
+PlaceMemo rendering is native to Today / Trip / Map renderers. The old P14 render-wrapper and post-render DOM decorator chain has been removed.
+
+## 4. Shared helper ownership
+
+### Smart date / display labels
+
+`p7.js` now owns helpers only:
+- `window.travelPlannerSmartTripDate`
+- `window.travelPlannerGroupLabel`
+- legacy text relabel observer
+
+It no longer overrides `ensureDates` or `bindDateControls`.
+
+### Google Maps
+
+`p7maps-shared.js` owns:
 - storage key `travelPlanner.googleMaps.v1`
 - settings read/save/clear
-- Google Maps JavaScript API loader promise
+- Google Maps JavaScript API loader
 - coordinate parsing/validation
 - place search URL
 - directions URL
@@ -101,162 +143,66 @@ Consumers:
 - `p7today.js`
 - `p8.js`
 
-It does **not** own map rendering or view state.
+### PlaceMemo
 
-### `TRAVEL_PLANNER_PLACE_MEMOS`
+`p14-place-memos-traveler.js` owns:
+- `window.TRAVEL_PLANNER_PLACE_MEMOS`
+- memo fetch/cache/sort/html helpers
+- PlaceMemo styles
+- native Trip renderer
 
-`p14-place-memos-traveler.js` now owns the shared PlaceMemo runtime:
+## 5. P15 bootstrap status after Phase C
 
-- memo loading/cache
-- sort order
-- memo HTML rendering
-- memo styles
+`p15-bootstrap.js` remains in the repository for historical comparison and future deliberate architecture work, but is no longer loaded by `index.html` and is no longer part of the PWA app shell.
 
-It no longer wraps `renderToday`, `renderTrip`, or `renderMap`, and it no longer scans the DOM after rendering.
+Reason:
+- before Phase C, its `api` and `ensureDates` overrides were themselves overwritten later by P4/P7
+- `TRAVEL_PLANNER_BOOTSTRAP` had no production consumer
+- reactivating it by moving load order previously caused an `API 載入失敗` regression
 
-### `renderToday`
+Therefore P15 bootstrap is **dormant / non-runtime**. Do not re-add it to the production loader as a cleanup-only change.
 
-1. `app.js` defines the original Today renderer.
-2. `p7today.js` replaces it with the itinerary-first P7.8 / P15.3 flight-card Today renderer.
-3. `p7today.js` now waits for the shared PlaceMemo runtime and renders memo HTML directly inside each itinerary stop.
-
-**Final owner: `p7today.js`.**
-
-### `renderTrip`
-
-1. `app.js` defines the base Trip renderer.
-2. `p14-place-memos-traveler.js` replaces it with a native Trip renderer that preserves the existing Trip layout and renders memo HTML directly by `place_id`.
-
-**Final owner: `p14-place-memos-traveler.js`.**
-
-### `renderMap`
-
-1. `app.js` defines the base list-style map renderer.
-2. `p7map.js` replaces it with Google Maps JavaScript API rendering and shared Maps configuration/runtime helpers.
-3. `p7map.js` now waits for the shared PlaceMemo runtime and renders memo HTML directly inside each place card.
-
-**Final owner: `p7map.js`.**
-
-### `renderBookings`
-
-1. `app.js` defines the base Bookings renderer.
-2. `p4.js` replaces it with member-name lookup and deadline behavior.
-
-**Final owner: `p4.js`.**
-
-### `renderMore`
-
-1. `app.js` defines the original More renderer.
-2. `p4.js` replaces it.
-3. `p8.js` replaces it again with current P12 Admin cutover / Maps / PWA settings UI.
-
-**Final owner: `p8.js`.**
-
-### `renderCurrent`
-
-1. `app.js` defines the base dispatcher.
-2. `p4.js` replaces it with the current error/retry wrapper and dispatcher.
-3. No later script replaces it.
-
-Because it resolves renderer globals at call time, it dispatches to the later renderer owners described above.
-
-**Final owner: `p4.js`.**
-
-### `bindDateControls`
-
-1. `app.js` defines the base date-control binding.
-2. `p7.js` wraps it and adds `state.__dateSelectedByUser` tracking.
-3. No later script replaces it.
-
-**Final callable: P7 wrapper around `app.js` binding.**
-
-## 3. Effective production composition
-
-After all files load, the important global composition is approximately:
+## 6. Effective production composition
 
 ```text
-jsonp                        -> p7network.js
-api                           -> p4.js
-ensureDates                   -> p7.js
-TRAVEL_PLANNER_MAPS           -> p7maps-shared.js
-TRAVEL_PLANNER_PLACE_MEMOS    -> p14-place-memos-traveler.js
-bindDateControls              -> p7.js wrapper(app.js)
-renderCurrent                 -> p4.js
-renderToday                   -> p7today.js
-renderTrip                    -> p14-place-memos-traveler.js
-renderMap                     -> p7map.js
-renderBookings                -> p4.js
-renderMore                    -> p8.js
+jsonp                      -> p7network.js
+api                        -> p16-runtime-core.js
+ensureDates                -> p16-runtime-core.js
+bindDateControls           -> p16-runtime-core.js
+renderCurrent              -> p16-runtime-core.js
+travelPlannerSmartTripDate -> p7.js
+travelPlannerGroupLabel    -> p7.js
+TRAVEL_PLANNER_MAPS        -> p7maps-shared.js
+TRAVEL_PLANNER_PLACE_MEMOS -> p14-place-memos-traveler.js
+renderToday                -> p7today.js
+renderTrip                 -> p14-place-memos-traveler.js
+renderBookings             -> p4.js
+renderMap                  -> p7map.js
+renderMore                 -> p8.js
 ```
 
-The P14 post-render wrapper/decorator layer has been removed. PlaceMemos are now renderer-native for Today, Trip, and Map.
+This replaces the old patch-on-patch core ownership contract.
 
-## 4. P15 bootstrap reality
+## 7. Google Cloud / OAuth external contract
 
-`p15-bootstrap.js` is loaded and initializes its closure, snapshot caches, `TRAVEL_PLANNER_BOOTSTRAP`, and captured P7.7 `baseApi`.
+Phase C does not require Google Cloud Console changes.
 
-However, later scripts replace both globals that P15.1 initially owns:
-
-- `api` is replaced by `p4.js`
-- `ensureDates` is replaced by `p7.js`
-
-Therefore do **not** assume that moving P15 later in the load order is harmless. Doing so changes the final API composition and has already caused a production regression (`API 載入失敗`) during an earlier P16.1 attempt.
-
-Any future bootstrap consolidation must be treated as an architecture migration with explicit smoke tests, not a script-order cleanup.
-
-## 5. Google Maps external contract
-
-`p7maps-shared.js` dynamically loads:
-
-```text
-https://maps.googleapis.com/maps/api/js
-```
-
-using the locally stored Maps API key, and consumers continue to use the same JavaScript Map ID.
-
-Current storage key:
-
-```text
-travelPlanner.googleMaps.v1
-```
-
-Current code does not require an HTML callback URL for Google Maps.
-
-### Cloud Console rule
-
-Routine JS ownership consolidation does **not** require a Cloud Console change as long as all of these remain unchanged:
-
+Unchanged external contracts:
 - GitHub Pages origin/domain
-- Maps API key restrictions / allowed website referrers
+- Maps API key restrictions / website referrers
 - enabled Maps JavaScript API
-- Map ID usage
-- OAuth client and OAuth redirect path
-
-If a future cleanup proposes any path/origin/callback/client change that could require Google Cloud Console or OAuth configuration changes, stop before implementation and inform the project owner first.
-
-## 6. OAuth / Admin boundary
-
-Traveler runtime cleanup must not casually modify:
-
-- `p9-auth-poc.html`
+- Map ID
+- OAuth client
 - Admin OAuth callback path
-- OAuth client ID behavior
-- `travelPlanner.p9AuthEndpoint.v1`
-- `travelPlanner.p9Session.v1`
 - Admin Apps Script deployment URL
+- Traveler public Apps Script deployment URL
 
-Those are external/auth contracts and require a separate migration decision.
+If future frontend cleanup proposes changing an origin, callback path, OAuth client, Maps API restriction/referrer, Map ID, or Apps Script deployment contract, stop before implementation and inform the project owner first.
 
-## 7. Safe consolidation order
+## 8. Regression policy
 
-Before merging the remaining runtime core, use this order:
+If any Traveler cleanup regression appears, compare behavior against:
 
-1. Preserve the current relative order of existing production scripts.
-2. Keep renderer behavior stable now that Maps helpers and PlaceMemo rendering are consolidated.
-3. Establish one API adapter only after reproducing the effective P4 request contract and P7.7 resilience behavior.
-4. Establish one date-selection owner only after preserving P7 smart-date/user-selection semantics.
-5. Consolidate `renderCurrent` only after API/date ownership is stable.
-6. Change or remove legacy runtime files only after the replacement runtime is behavior-equivalent.
-7. Smoke-test Safari + installed PWA + Admin navigation before deleting historical runtime files.
+`55fd670eb4a2baa33e3d09ee12affad6e56c58be`
 
-Do not combine core data/runtime consolidation with unrelated P16 UX changes.
+Phase C must preserve the effective production behavior from that baseline even though ownership and file responsibilities are now cleaner.
