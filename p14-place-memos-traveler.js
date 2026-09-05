@@ -1,7 +1,5 @@
 /* P14.3 Traveler PlaceMemo rendering. Fail-soft: memo API failure never blocks existing views. */
 (function(){'use strict';
-  const PROD_AUTH_API='https://script.google.com/macros/s/AKfycbzpBT-CqGtHiFtY9mb_p_diNNs46GC4h7ks-gKCMKHG-bSE6xWE_Q5Vc0eAkET4kpsS/exec';
-  const AUTH_ENDPOINT_KEY='travelPlanner.p9AuthEndpoint.v1';
   const memoIcons={food:'🍴',shopping:'🛍',note:'📝',reservation:'⏰'};
   let memoCache=null,memoPromise=null;
 
@@ -12,9 +10,7 @@
     document.head.appendChild(s);
   }
 
-  function memoApiBase(){
-    try{return String(localStorage.getItem(AUTH_ENDPOINT_KEY)||'').trim()||PROD_AUTH_API}catch(_){return PROD_AUTH_API}
-  }
+  function memoApiBase(){return String(config&&config.apiBase||'').trim()}
 
   function jsonp(url,timeoutMs=10000){
     return new Promise((resolve,reject)=>{
@@ -35,6 +31,7 @@
     memoPromise=(async()=>{
       try{
         const base=memoApiBase();
+        if(!base)throw new Error('memo api base unavailable');
         let data;
         try{data=await jsonp(new URL(base+'/place_memos'));}
         catch(_){const u=new URL(base);u.searchParams.set('resource','place_memos');data=await jsonp(u)}
