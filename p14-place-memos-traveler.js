@@ -1,4 +1,4 @@
-/* P14.3 Traveler PlaceMemo rendering. P15.1: reads through shared api/bootstrap cache. */
+/* Traveler PlaceMemo runtime + native Trip renderer. */
 (function(){'use strict';
   const memoIcons={food:'🍴',shopping:'🛍',note:'📝',reservation:'⏰'};
   let memoCache=null,memoPromise=null;
@@ -10,7 +10,7 @@
     document.head.appendChild(s);
   }
 
-  async function loadMemos(force=false){
+  async function load(force=false){
     if(!force&&memoCache)return memoCache;
     if(!force&&memoPromise)return memoPromise;
     memoPromise=(async()=>{
@@ -18,84 +18,40 @@
         const rows=await api('place_memos',{},force);
         if(!Array.isArray(rows))throw new Error('memo api unavailable');
         memoCache=rows.slice().sort((a,b)=>String(a.place_id||'').localeCompare(String(b.place_id||''))||Number(a.sort_order||0)-Number(b.sort_order||0)||String(a.title||'').localeCompare(String(b.title||'')));
-      }catch(error){console.warn('P14 memo read unavailable; Traveler continues without memos.',error);memoCache=[]}
-      finally{memoPromise=null}
+      }catch(error){
+        console.warn('PlaceMemo read unavailable; Traveler continues without memos.',error);
+        memoCache=[];
+      }finally{memoPromise=null}
       return memoCache;
     })();
     return memoPromise;
   }
 
-  function memosFor(placeId){return (memoCache||[]).filter(m=>m.place_id===placeId)}
-  function memoHtml(placeId){
-    const rows=memosFor(placeId);if(!rows.length)return'';
+  function rowsFor(placeId){return (memoCache||[]).filter(m=>m.place_id===placeId)}
+
+  function html(placeId){
+    const rows=rowsFor(placeId);if(!rows.length)return'';
     return '<div class="place-memos">'+rows.map(m=>'<div class="place-memo '+esc(m.priority||'')+'"><span class="place-memo-icon">'+(memoIcons[m.type]||'📝')+'</span><div class="place-memo-main"><div class="place-memo-title">'+esc(m.title||'')+'</div>'+(m.note?'<div class="place-memo-note">'+esc(m.note)+'</div>':'')+'</div></div>').join('')+'</div>';
   }
 
-  function groupFilterValue(){return (state.group==='ours'||state.group==='friends')?state.group+',all':null}
+  function clear(){memoCache=null;memoPromise=null}
 
-  async function decorateToday(force){
-    try{
-      const [items,places]=await Promise.all([api('itinerary',{date:state.date,group:groupFilterValue()},force),api('places',{},force)]);
-      const placeIds=new Set(places.map(p=>p.id));
-      const stops=items.filter(item=>item.place_id&&placeIds.has(item.place_id));
-      const nodes=[...document.querySelectorAll('.today-stop')];
-      nodes.forEach((node,index)=>{
-        const item=stops[index];if(!item||node.querySelector('.place-memos'))return;
-        const html=memoHtml(item.place_id);if(!html)return;
-        const target=node.querySelector('.today-stop-main > div');
-        if(target)target.insertAdjacentHTML('beforeend',html);
-      });
-    }catch(error){console.warn('P14 today memo decorate failed',error)}
-  }
+  addStyles();
+  window.TRAVEL_PLANNER_PLACE_MEMOS=Object.freeze({load,html,clear,rowsFor});
 
-  async function decorateTrip(force){
-    try{
-      const places=await api('places',{},force);
-      const ordered=[...places].sort((a,b)=>String(b.name||'').length-String(a.name||'').length);
-      document.querySelectorAll('.trip-place').forEach(node=>{
-        if(node.parentElement&&node.parentElement.querySelector('.place-memos'))return;
-        const text=String(node.textContent||'').replace(/^⌖\s*/,'').trim();
-        const place=ordered.find(p=>text.startsWith(String(p.name||'').trim()));
-        if(place){const html=memoHtml(place.id);if(html)node.insertAdjacentHTML('afterend',html)}
-      });
-    }catch(error){console.warn('P14 trip memo decorate failed',error)}
-  }
-
-  function decorateMap(){
-    try{
-      document.querySelectorAll('[data-place-id]').forEach(card=>{
-        if(card.querySelector('.place-memos'))return;
-        const html=memoHtml(card.dataset.placeId);if(!html)return;
-        const actions=card.querySelector('.map-place-actions');
-        actions?actions.insertAdjacentHTML('beforebegin',html):card.insertAdjacentHTML('beforeend',html);
-      });
-    }catch(error){console.warn('P14 map memo decorate failed',error)}
-  }
-
-  function patchToday(){
-    if(typeof renderToday!=='function'||renderToday.__p14MemoWrapped)return;
-    const original=renderToday;
-    renderToday=async function(force=false){await loadMemos(force);await original(force);await decorateToday(force)};
-    renderToday.__p14MemoWrapped=true;
-  }
-
-  function patchTrip(){
-    if(typeof renderTrip!=='function'||renderTrip.__p14MemoWrapped)return;
-    const original=renderTrip;
-    renderTrip=async function(force=false){await loadMemos(force);await original(force);await decorateTrip(force)};
-    renderTrip.__p14MemoWrapped=true;
-  }
-
-  function patchMap(){
-    if(typeof renderMap!=='function'||renderMap.__p14MemoWrapped)return;
-    const original=renderMap;
-    renderMap=async function(force=false){await loadMemos(force);await original(force);decorateMap()};
-    renderMap.__p14MemoWrapped=true;
-  }
-
-  function attach(){
-    addStyles();patchToday();patchTrip();patchMap();memoCache=null;
-    if(!window.TRAVEL_PLANNER_DEFER_INITIAL_RENDER){try{renderCurrent(false)}catch(error){console.warn('P14 initial render failed',error)}}
-  }
-  if(document.readyState==='loading')document.addEventListener('DOMContentLoaded',attach);else attach();
+  try{
+    renderTrip=async function(force=false){
+      pageTitle.textContent='行程';loading();
+      const [items,reservations,places]=await Promise.all([
+        api('itinerary',{group:groupParam()},force),
+        api('reservations',{group:groupParam()},force),
+        api('places',{},force),
+        load(force)
+      ]);
+      const reservationById=new Map(reservations.map(r=>[r.id,r])),placeById=new Map(places.map(p=>[p.id,p]));
+      const grouped=items.reduce((a,i)=>((a[i.date]??=[]).push(i),a),{});
+      app.innerHTML=`<section class="section">${filters()}</section><section class="stack">${Object.keys(grouped).length?Object.entries(grouped).map(([d,x])=>`<div class="card"><div class="row" style="margin-bottom:12px"><h2 style="margin:0">${esc(formatDateLabel(d))}</h2><span class="badge">${x.length} 個行程</span></div><div class="stack">${x.map(i=>{const r=i.reservation_id?reservationById.get(i.reservation_id):null,p=i.place_id?placeById.get(i.place_id):null;return `<div class="trip-row"><div><strong>${esc(i.start_time||'—')} · ${esc(i.title)}</strong><div class="meta">${esc(i.city||'')} · ${esc(groupLabel(i.group||''))}</div>${p?`<div class="trip-place">⌖ ${esc(p.name)} ${mapLink(p,'地圖')}</div>${html(p.id)}`:''}</div>${r?`<span class="badge ${esc(r.status||'')}">${esc(statusLabel(r.status))}</span>`:''}</div>`}).join('')}</div></div>`).join(''):'<div class="card empty">目前沒有行程資料。</div>'}</section>`;
+      bindFilters();
+    };
+  }catch(error){console.error('PlaceMemo native Trip renderer failed',error)}
 })();
