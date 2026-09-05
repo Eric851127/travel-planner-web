@@ -1,29 +1,4 @@
-/* P4/P5 production acceptance fixes */
-
-api = async function(resource, params = {}, force = false) {
-  const url = new URL(config.apiBase);
-  url.searchParams.set('resource', resource);
-
-  const scopedParams = Object.assign({}, params);
-  if (scopedParams.group && scopedParams.group !== 'all' && !String(scopedParams.group).includes(',')) {
-    scopedParams.group = String(scopedParams.group) + ',all';
-  }
-
-  Object.entries(scopedParams).forEach(([key, value]) => {
-    if (value !== null && value !== undefined && value !== '') {
-      url.searchParams.set(key, value);
-    }
-  });
-
-  url.searchParams.set('_ts', Date.now().toString());
-  const cacheKey = resource + '?' + new URLSearchParams(scopedParams).toString();
-  if (!force && state.cache.has(cacheKey)) return state.cache.get(cacheKey);
-
-  const json = await jsonp(url, 18000);
-  if (!json || !json.success) throw new Error(json?.error?.message || 'API 發生錯誤');
-  state.cache.set(cacheKey, json.data);
-  return json.data;
-};
+/* Traveler Bookings + legacy More renderers. Runtime core ownership lives in p16-runtime-core.js. */
 
 renderBookings = async function(force = false) {
   pageTitle.textContent = '預訂';
@@ -74,21 +49,4 @@ renderMore = function() {
     state.cache.clear();
     location.reload();
   };
-};
-
-renderCurrent = async function(force = false) {
-  try {
-    if (state.view === 'today') return await renderToday(force);
-    if (state.view === 'trip') return await renderTrip(force);
-    if (state.view === 'bookings') return await renderBookings(force);
-    if (state.view === 'map') return await renderMap(force);
-    return renderMore();
-  } catch (e) {
-    app.innerHTML = `<div class="card error"><div>載入失敗：${esc(e.message)}</div><button id="retryBtn" class="retry-button" type="button">重新嘗試</button></div>`;
-    const retry = document.getElementById('retryBtn');
-    if (retry) retry.onclick = async () => {
-      state.cache.clear();
-      await renderCurrent(true);
-    };
-  }
 };
