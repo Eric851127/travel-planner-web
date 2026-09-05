@@ -16,7 +16,7 @@ PWA/runtime shell:
 - `styles.css`
 - `app-icon.svg`
 
-Traveler JavaScript runtime, loaded in verified P15.3-relative order plus the Phase A shared Maps helper:
+Traveler JavaScript runtime, loaded in verified P15.3-relative order plus the shared runtime helpers:
 
 ```text
 app.js
@@ -33,6 +33,8 @@ p14-place-memos-traveler.js
 
 `p7maps-shared.js` is an active shared dependency for `p7map.js`, `p7today.js`, and `p8.js`. It owns Maps settings/storage/loader helpers only; it does not own render lifecycle or API data access.
 
+`p14-place-memos-traveler.js` now owns the shared PlaceMemo runtime and the native Trip renderer. It no longer wraps Today/Trip/Map after rendering. Today and Map render memo HTML directly inside their own renderers.
+
 Detailed verified ownership/execution map:
 - `docs/TRAVELER_RUNTIME_EXECUTION_MAP.md`
 
@@ -46,7 +48,7 @@ Do not:
 - delete them because an older phase number appears obsolete
 - merge them during a small bug fix
 
-Their current global override behavior is technical debt to be handled in a dedicated architecture phase.
+Their remaining global override behavior is technical debt to be handled in the core runtime consolidation phase.
 
 ## 2. Admin production entry
 
@@ -148,13 +150,13 @@ Files in `docs/history/` are retained for audit and rollback context only. They 
 ## 6. Known technical debt
 
 ### Traveler
-- patch-on-patch global overrides
-- runtime behavior depends on script load order
+- patch-on-patch global overrides remain around the data/date core
+- runtime behavior still depends on script load order
 - final `api` owner is `p4.js`, not `p15-bootstrap.js`
 - final `ensureDates` owner is `p7.js`, not `p15-bootstrap.js`
 - Maps settings/loader helpers are consolidated under `p7maps-shared.js`
-- render ownership is split across `app.js`, `p4.js`, `p7map.js`, `p7today.js`, `p8.js`, and the P14 wrappers
-- async render lifecycle has no single owner
+- PlaceMemo post-render wrappers are removed; memo rendering is native in Today/Trip/Map
+- renderer ownership is now explicit, but `renderCurrent` and the data/date lifecycle still have no single architecture owner
 
 ### Admin
 - `admin.html` performs string-patch composition over `admin-p11.html`
