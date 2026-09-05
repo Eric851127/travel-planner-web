@@ -13,15 +13,15 @@
 <link rel="apple-touch-icon" href="app-icon.svg?v=p12-20260904">
 <link rel="stylesheet" href="styles.css?v=p15-3-20260905">
 <link rel="preload" href="app.js?v=p15-3-20260905" as="script">
-<link rel="preload" href="p7network.js?v=p15-3-20260905" as="script">
-<link rel="preload" href="p15-bootstrap.js?v=p15-3-20260905" as="script">
-<link rel="preload" href="p4.js?v=p15-3-20260905" as="script">
-<link rel="preload" href="p7.js?v=p15-3-20260905" as="script">
+<link rel="preload" href="p7network.js?v=cleanup-20260905-4" as="script">
+<link rel="preload" href="p4.js?v=cleanup-20260905-4" as="script">
+<link rel="preload" href="p7.js?v=cleanup-20260905-4" as="script">
 <link rel="preload" href="p7maps-shared.js?v=cleanup-20260905-2" as="script">
 <link rel="preload" href="p7map.js?v=cleanup-20260905-3" as="script">
 <link rel="preload" href="p7today.js?v=cleanup-20260905-3" as="script">
 <link rel="preload" href="p8.js?v=cleanup-20260905-2" as="script">
 <link rel="preload" href="p14-place-memos-traveler.js?v=cleanup-20260905-3" as="script">
+<link rel="preload" href="p16-runtime-core.js?v=cleanup-20260905-4" as="script">
 <style>
   #startupScreen{display:none;min-height:100dvh;box-sizing:border-box;padding:calc(24px + env(safe-area-inset-top)) 20px calc(24px + env(safe-area-inset-bottom));background:#f6f7f9;color:#202124;align-items:center;justify-content:center;text-align:center}
   #startupScreen .startup-card{width:min(360px,100%);padding:28px 20px;border-radius:18px;background:#fff;box-shadow:0 8px 28px rgba(60,64,67,.12)}
@@ -124,15 +124,15 @@
     window.TRAVEL_PLANNER_DEFER_INITIAL_RENDER = true;
     try {
       await appendScript('app.js?v=p15-3-20260905');
-      await appendScript('p7network.js?v=p15-3-20260905');
-      await appendScript('p15-bootstrap.js?v=p15-3-20260905');
-      await appendScript('p4.js?v=p15-3-20260905');
-      await appendScript('p7.js?v=p15-3-20260905');
+      await appendScript('p7network.js?v=cleanup-20260905-4');
+      await appendScript('p4.js?v=cleanup-20260905-4');
+      await appendScript('p7.js?v=cleanup-20260905-4');
       await appendScript('p7maps-shared.js?v=cleanup-20260905-2');
       await appendScript('p7map.js?v=cleanup-20260905-3');
       await appendScript('p7today.js?v=cleanup-20260905-3');
       await appendScript('p8.js?v=cleanup-20260905-2');
       await appendScript('p14-place-memos-traveler.js?v=cleanup-20260905-3');
+      await appendScript('p16-runtime-core.js?v=cleanup-20260905-4');
 
       window.TRAVEL_PLANNER_DEFER_INITIAL_RENDER = false;
       await renderCurrent(false);
