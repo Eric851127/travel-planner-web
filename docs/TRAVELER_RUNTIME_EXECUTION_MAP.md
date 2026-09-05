@@ -87,7 +87,7 @@ The P15.1 bootstrap-backed `ensureDates` is **not** the final implementation in 
 
 ### `TRAVEL_PLANNER_MAPS`
 
-`p7maps-shared.js` is now the single shared owner for Traveler Google Maps helper behavior:
+`p7maps-shared.js` is the single shared owner for Traveler Google Maps helper behavior:
 
 - storage key `travelPlanner.googleMaps.v1`
 - settings read/save/clear
@@ -103,29 +103,39 @@ Consumers:
 
 It does **not** own map rendering or view state.
 
+### `TRAVEL_PLANNER_PLACE_MEMOS`
+
+`p14-place-memos-traveler.js` now owns the shared PlaceMemo runtime:
+
+- memo loading/cache
+- sort order
+- memo HTML rendering
+- memo styles
+
+It no longer wraps `renderToday`, `renderTrip`, or `renderMap`, and it no longer scans the DOM after rendering.
+
 ### `renderToday`
 
 1. `app.js` defines the original Today renderer.
 2. `p7today.js` replaces it with the itinerary-first P7.8 / P15.3 flight-card Today renderer.
-3. `p14-place-memos-traveler.js` wraps the current `renderToday` to preload/decorate PlaceMemos.
+3. `p7today.js` now waits for the shared PlaceMemo runtime and renders memo HTML directly inside each itinerary stop.
 
-**Final callable: P14 wrapper around `p7today.js` renderer.**
+**Final owner: `p7today.js`.**
 
 ### `renderTrip`
 
 1. `app.js` defines the base Trip renderer.
-2. No intermediate script replaces it.
-3. `p14-place-memos-traveler.js` wraps it to decorate PlaceMemos.
+2. `p14-place-memos-traveler.js` replaces it with a native Trip renderer that preserves the existing Trip layout and renders memo HTML directly by `place_id`.
 
-**Final callable: P14 wrapper around `app.js` Trip renderer.**
+**Final owner: `p14-place-memos-traveler.js`.**
 
 ### `renderMap`
 
 1. `app.js` defines the base list-style map renderer.
 2. `p7map.js` replaces it with Google Maps JavaScript API rendering and shared Maps configuration/runtime helpers.
-3. `p14-place-memos-traveler.js` wraps it to decorate PlaceMemos.
+3. `p7map.js` now waits for the shared PlaceMemo runtime and renders memo HTML directly inside each place card.
 
-**Final callable: P14 wrapper around `p7map.js` renderer.**
+**Final owner: `p7map.js`.**
 
 ### `renderBookings`
 
@@ -148,7 +158,7 @@ It does **not** own map rendering or view state.
 2. `p4.js` replaces it with the current error/retry wrapper and dispatcher.
 3. No later script replaces it.
 
-Because it resolves renderer globals at call time, it dispatches to the later P7/P8/P14 replacements described above.
+Because it resolves renderer globals at call time, it dispatches to the later renderer owners described above.
 
 **Final owner: `p4.js`.**
 
@@ -165,20 +175,21 @@ Because it resolves renderer globals at call time, it dispatches to the later P7
 After all files load, the important global composition is approximately:
 
 ```text
-jsonp               -> p7network.js
-api                  -> p4.js
-ensureDates          -> p7.js
-TRAVEL_PLANNER_MAPS  -> p7maps-shared.js
-bindDateControls     -> p7.js wrapper(app.js)
-renderCurrent        -> p4.js
-renderToday          -> p14 wrapper(p7today.js)
-renderTrip           -> p14 wrapper(app.js)
-renderMap            -> p14 wrapper(p7map.js)
-renderBookings       -> p4.js
-renderMore           -> p8.js
+jsonp                        -> p7network.js
+api                           -> p4.js
+ensureDates                   -> p7.js
+TRAVEL_PLANNER_MAPS           -> p7maps-shared.js
+TRAVEL_PLANNER_PLACE_MEMOS    -> p14-place-memos-traveler.js
+bindDateControls              -> p7.js wrapper(app.js)
+renderCurrent                 -> p4.js
+renderToday                   -> p7today.js
+renderTrip                    -> p14-place-memos-traveler.js
+renderMap                     -> p7map.js
+renderBookings                -> p4.js
+renderMore                    -> p8.js
 ```
 
-This remains the verified P15.3 behavior boundary plus the Phase A shared-helper consolidation.
+The P14 post-render wrapper/decorator layer has been removed. PlaceMemos are now renderer-native for Today, Trip, and Map.
 
 ## 4. P15 bootstrap reality
 
@@ -238,15 +249,14 @@ Those are external/auth contracts and require a separate migration decision.
 
 ## 7. Safe consolidation order
 
-Before merging runtime files, use this order:
+Before merging the remaining runtime core, use this order:
 
 1. Preserve the current relative order of existing production scripts.
-2. Consolidate pure helpers/display functions first.
+2. Keep renderer behavior stable now that Maps helpers and PlaceMemo rendering are consolidated.
 3. Establish one API adapter only after reproducing the effective P4 request contract and P7.7 resilience behavior.
 4. Establish one date-selection owner only after preserving P7 smart-date/user-selection semantics.
-5. Consolidate renderers one surface at a time.
-6. Keep P14 memo decoration behavior until memos are rendered natively by each final renderer.
-7. Change the legacy script list only after the replacement runtime is behavior-equivalent.
-8. Smoke-test Safari + installed PWA + Admin navigation before deleting historical runtime files.
+5. Consolidate `renderCurrent` only after API/date ownership is stable.
+6. Change or remove legacy runtime files only after the replacement runtime is behavior-equivalent.
+7. Smoke-test Safari + installed PWA + Admin navigation before deleting historical runtime files.
 
-Do not combine script consolidation with unrelated P16 UX changes.
+Do not combine core data/runtime consolidation with unrelated P16 UX changes.
