@@ -1,14 +1,9 @@
-/* P16.3 Admin itinerary mobility detail decorator. Read-only bootstrap, no API contract changes. */
+/* P16.3.1 Admin itinerary mobility detail decorator. Shared bootstrap only. */
 (function(){'use strict';
-  const ENDPOINT_KEY='travelPlanner.p9AuthEndpoint.v1';
-  const SESSION_KEY='travelPlanner.p9Session.v1';
   const STYLE_ID='p163AdminMobilityDetailStyle';
-  let bootstrapPromise=null;
   let scheduled=false;
 
   function esc(v){return String(v==null?'':v).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;').replace(/'/g,'&#039;')}
-  function endpoint(){return String(localStorage.getItem(ENDPOINT_KEY)||'').trim()}
-  function token(){return String(localStorage.getItem(SESSION_KEY)||'').trim()}
 
   function addStyles(){
     if(document.getElementById(STYLE_ID))return;
@@ -17,29 +12,15 @@
     document.head.appendChild(s);
   }
 
-  async function bootstrap(){
-    if(bootstrapPromise)return bootstrapPromise;
-    bootstrapPromise=(async()=>{
-      const ep=endpoint(),tk=token();
-      if(!ep||!tk)return null;
-      try{
-        const params=new URLSearchParams({mode:'admin_api',action:'bootstrap',session_token:tk});
-        const r=await fetch(ep,{method:'POST',body:params,redirect:'follow'});
-        const json=await r.json();
-        return json&&json.ok?json.data:null;
-      }catch(error){console.warn('P16.3 Admin mobility detail unavailable',error);return null;}
-    })();
-    return bootstrapPromise;
-  }
-
   function label(type){return({train:'火車',bus:'巴士',ferry:'渡輪',rental_car:'租車',airport_transfer:'機場接送',other:'其他交通'}[type]||type||'交通')}
 
-  async function decorate(){
+  function decorate(){
     scheduled=false;
     const title=document.getElementById('pageTitle');
     if(!title||title.textContent.trim()!=='行程管理')return;
     const list=document.getElementById('list');if(!list)return;
-    const data=await bootstrap();if(!data)return;
+    const data=window.TRAVEL_PLANNER_ADMIN_BOOTSTRAP;
+    if(!data)return;
     const itinerary=Array.isArray(data.itinerary)?data.itinerary:[];
     const transports=Array.isArray(data.transport)?data.transport:[];
     const places=Array.isArray(data.places)?data.places:[];
@@ -64,7 +45,8 @@
 
   function schedule(){if(scheduled)return;scheduled=true;requestAnimationFrame(decorate)}
   addStyles();
+  window.addEventListener('travel-planner-admin-bootstrap',schedule);
   new MutationObserver(schedule).observe(document.documentElement,{childList:true,subtree:true});
   schedule();
-  window.TRAVEL_PLANNER_ADMIN_MOBILITY_DETAIL=Object.freeze({version:'P16.3'});
+  window.TRAVEL_PLANNER_ADMIN_MOBILITY_DETAIL=Object.freeze({version:'P16.3.1',dataSource:'shared-bootstrap'});
 })();
