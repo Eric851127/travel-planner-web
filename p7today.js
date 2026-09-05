@@ -43,6 +43,7 @@
   function loadGoogleMaps(apiKey) { return window.TRAVEL_PLANNER_MAPS.load(apiKey); }
   function coord(place) { return window.TRAVEL_PLANNER_MAPS.coordinates(place); }
   function directionsUrl(from, to, mode = 'transit') { return window.TRAVEL_PLANNER_MAPS.directionsUrl(from, to, mode); }
+  function memoHtml(placeId) { return window.TRAVEL_PLANNER_PLACE_MEMOS ? window.TRAVEL_PLANNER_PLACE_MEMOS.html(placeId) : ''; }
 
   function transportMode(type) {
     return type === 'rental_car' ? 'driving' : 'transit';
@@ -172,7 +173,7 @@
         const planned = transportBetween(stop.place.id, next.place.id, transports);
         transfer = planned ? plannedTransportHtml(planned, stop.place, next.place) : suggestedTransportHtml(stop.place, next.place);
       }
-      return `<div class="today-stop"><div class="today-stop-main"><span class="today-stop-number">${stop.number}</span><div><strong>${esc(stop.item.title || stop.place.name)}</strong><div class="meta">${esc(stop.item.start_time || '')}${stop.item.city ? ` · ${esc(stop.item.city)}` : ''}</div>${stop.item.description ? `<div class="meta">${esc(stop.item.description)}</div>` : ''}</div></div>${transfer}</div>`;
+      return `<div class="today-stop"><div class="today-stop-main"><span class="today-stop-number">${stop.number}</span><div><strong>${esc(stop.item.title || stop.place.name)}</strong><div class="meta">${esc(stop.item.start_time || '')}${stop.item.city ? ` · ${esc(stop.item.city)}` : ''}</div>${stop.item.description ? `<div class="meta">${esc(stop.item.description)}</div>` : ''}${memoHtml(stop.place.id)}</div></div>${transfer}</div>`;
     }).join('')}</div>`;
   }
 
@@ -202,7 +203,8 @@
         api('transport', { date: state.date, group }, force),
         api('hotels', { group }, force),
         api('places', {}, force),
-        api('flights', { date: state.date, group }, force)
+        api('flights', { date: state.date, group }, force),
+        window.TRAVEL_PLANNER_PLACE_MEMOS ? window.TRAVEL_PLANNER_PLACE_MEMOS.load(force) : Promise.resolve([])
       ]);
 
       const placeById = new Map(places.map(p => [p.id, p]));
