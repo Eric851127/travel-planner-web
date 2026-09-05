@@ -1,6 +1,6 @@
 const P10_CONFIG = {
   SPREADSHEET_ID: '1wk_rVY8cgJbmS1PJBIP95Z_CGnz2a-QQjTVA1xqLIh8',
-  SHEETS: { itinerary:'Itinerary', reservations:'Reservations', hotels:'Hotels', flights:'Flights', transport:'Transport', places:'Places', members:'Members' },
+  SHEETS: { itinerary:'Itinerary', reservations:'Reservations', hotels:'Hotels', flights:'Flights', transport:'Transport', places:'Places', place_memos:'PlaceMemos', members:'Members' },
   GROUPS: ['ours','friends','all'],
   CERTAINTIES: ['confirmed','tentative','optional'],
   RESERVATION_CATEGORIES: ['hotel','flight','train','restaurant','activity','ticket','rental_car','other'],
@@ -40,7 +40,9 @@ function p10RouteAuthorized_(action, params, admin) {
     case 'save_transport': return p10SaveEntityAuthorized_('transport', p10Payload_(params), 'T', p10ValidateTransport_);
     case 'delete_transport': return p10DeleteEntityAuthorized_('transport', p10Id_(params), /^T\d{3,}$/, function(ss,id){p10AssertNotReferenced_(ss,id,[{sheet:'itinerary',field:'transport_id',label:'Itinerary'}]);});
     case 'save_place': return p10SaveEntityAuthorized_('places', p10Payload_(params), 'P', p10ValidatePlace_);
-    case 'delete_place': return p10DeleteEntityAuthorized_('places', p10Id_(params), /^P\d{3,}$/, function(ss,id){p10AssertNotReferenced_(ss,id,[{sheet:'itinerary',field:'place_id',label:'Itinerary'},{sheet:'hotels',field:'place_id',label:'Hotels'},{sheet:'transport',field:'from_place_id',label:'Transport 出發地'},{sheet:'transport',field:'to_place_id',label:'Transport 目的地'}]);});
+    case 'delete_place': return p10DeleteEntityAuthorized_('places', p10Id_(params), /^P\d{3,}$/, function(ss,id){p10AssertNotReferenced_(ss,id,[{sheet:'itinerary',field:'place_id',label:'Itinerary'},{sheet:'hotels',field:'place_id',label:'Hotels'},{sheet:'transport',field:'from_place_id',label:'Transport 出發地'},{sheet:'transport',field:'to_place_id',label:'Transport 目的地'},{sheet:'place_memos',field:'place_id',label:'PlaceMemos'}]);});
+    case 'save_place_memo': return p10SaveEntityAuthorized_('place_memos', p10Payload_(params), 'PM', p14ValidatePlaceMemo_);
+    case 'delete_place_memo': return p10DeleteEntityAuthorized_('place_memos', p10Id_(params), /^PM\d{3,}$/, function(){});
     case 'gate_roundtrip': return p10RunCrudGateAuthorized_(admin);
     default: throw p10Error_('NOT_FOUND','Unknown Admin API action.');
   }
@@ -58,6 +60,7 @@ function p10GetAdminBootstrapAuthorized_(admin) {
     flights:p10ReadSheetObjects_(p10RequiredSheet_(ss,s.flights)),
     transport:p10ReadSheetObjects_(p10RequiredSheet_(ss,s.transport)),
     places:p10ReadSheetObjects_(p10RequiredSheet_(ss,s.places)),
+    place_memos:p10ReadSheetObjects_(p10RequiredSheet_(ss,s.place_memos)),
     members:members.filter(function(row){return p9Truthy_(row.active);}).map(p10PublicMember_),
     current_admin:p10CurrentAdmin_(admin),
     enums:{
@@ -66,7 +69,9 @@ function p10GetAdminBootstrapAuthorized_(admin) {
       reservation_category:P10_CONFIG.RESERVATION_CATEGORIES,
       reservation_status:P10_CONFIG.RESERVATION_STATUSES,
       transport_type:P10_CONFIG.TRANSPORT_TYPES,
-      place_category:P10_CONFIG.PLACE_CATEGORIES
+      place_category:P10_CONFIG.PLACE_CATEGORIES,
+      place_memo_type:P14_MEMO_TYPES,
+      place_memo_priority:P14_MEMO_PRIORITIES
     }
   };
 }
