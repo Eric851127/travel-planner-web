@@ -1,9 +1,9 @@
 # Main Branch Map
 
-Baseline: P15.3
+Production line: P16 complete
 Functional regression baseline commit: `55fd670eb4a2baa33e3d09ee12affad6e56c58be`
 
-This document classifies the files in GitHub `main` by runtime responsibility. The goal is to prevent cleanup work from accidentally deleting, moving, renaming, or reordering files that still participate in production.
+This document classifies the files in GitHub `main` by runtime responsibility. Use it before deleting, moving, renaming, or reordering production-looking files.
 
 ## 1. Traveler production entry
 
@@ -16,7 +16,7 @@ PWA/runtime shell:
 - `styles.css`
 - `app-icon.svg`
 
-Traveler JavaScript runtime after Phase C consolidation:
+Traveler JavaScript runtime:
 
 ```text
 app.js
@@ -32,44 +32,48 @@ p16-runtime-core.js
 ```
 
 Current responsibility map:
-- `app.js` — base state, DOM helpers, base render/helper definitions retained for compatibility
-- `p7network.js` — resilient JSONP transport only
-- `p4.js` — Bookings + legacy More renderer
-- `p7.js` — smart-date + group display helpers only
+- `app.js` — base state, DOM helpers, compatibility base definitions
+- `p7network.js` — resilient JSONP transport
+- `p4.js` — Bookings + legacy More fallback definitions
+- `p7.js` — smart-date + group display helpers
 - `p7maps-shared.js` — shared Maps settings/loader/URL helpers
-- `p7map.js` — native Map renderer
-- `p7today.js` — native Today renderer
+- `p7map.js` — Map renderer
+- `p7today.js` — Today renderer + mobility presentation
 - `p8.js` — current More renderer + PWA/Admin navigation
-- `p14-place-memos-traveler.js` — shared PlaceMemo runtime + native Trip renderer
-- `p16-runtime-core.js` — final owner for `api`, `ensureDates`, `bindDateControls`, and `renderCurrent`
+- `p14-place-memos-traveler.js` — PlaceMemo runtime + Trip renderer + trip mobility presentation
+- `p16-runtime-core.js` — final owner for `api`, date/group/nav interactions, refresh/retry, and `renderCurrent`
 
-Detailed verified ownership/execution map:
+Detailed ownership/execution map:
 - `docs/TRAVELER_RUNTIME_EXECUTION_MAP.md`
 
-### Dormant / non-runtime Traveler file
+### Removed dormant runtime
 
-- `p15-bootstrap.js`
-  - retained in repository for historical comparison / deliberate future architecture work
-  - no longer loaded by `index.html`
-  - no longer in the PWA app shell
-  - must not be re-added casually; previous load-order changes around this adapter caused production API regression
+`p15-bootstrap.js` was removed during P16.4 after verification that it was:
+- not loaded by `index.html`
+- not included in `sw.js`
+- not consumed by production runtime
 
-### Important
-
-The historical P-numbered filenames do not by themselves indicate whether a file is active. Use this map and `index.html` / `sw.js` as the authority before moving or deleting anything.
+Git history is the archive if deliberate future comparison is required.
 
 ## 2. Admin production entry
 
 Primary entry:
 - `admin.html`
 
-Current Admin UI body:
+Current Admin body/fallback:
 - `admin-p11.html`
 
-P14 Admin extension:
+Admin extension modules:
 - `p14-place-memos-admin.js`
+- `p16-admin-places-ux.js`
+- `p16-admin-mobility-detail.js`
 
-`admin.html` currently patches `admin-p11.html` at runtime to add production navigation and the PlaceMemo module. This is active production behavior and should not be consolidated during unrelated work.
+`admin.html` patches `admin-p11.html` at runtime. This is active production behavior and remains intentionally unchanged until a dedicated P17 Admin architecture migration.
+
+P16.3.1 shared bootstrap contract:
+- `admin-p11.html` performs the protected bootstrap through its existing flow
+- `admin.html` patches successful bootstrap handling to expose `window.TRAVEL_PLANNER_ADMIN_BOOTSTRAP`
+- `p16-admin-mobility-detail.js` reads that shared snapshot and does not issue another Apps Script bootstrap
 
 ## 3. Authentication / diagnostics pages
 
@@ -80,7 +84,7 @@ Detailed classification:
 
 - `p9-auth-poc.html`
   - current Admin login page and OAuth callback
-  - included in the PWA app shell by `sw.js`
+  - included in the PWA app shell
   - must remain at its current path unless OAuth callback configuration and login flow are migrated together
 
 Despite its historical `poc` filename, this is production runtime.
@@ -90,15 +94,13 @@ Despite its historical `poc` filename, this is production runtime.
 - `p9-auth-diagnostics.html`
   - P9 transport/session/protected-API diagnostics
   - not a production Admin entrypoint
-  - not part of the current PWA app shell
 
 - `p10-admin-api.html`
   - P10 bootstrap and protected CRUD diagnostics
   - includes a TEST-ONLY `gate_roundtrip` flow
   - not a production Admin entrypoint
-  - not part of the current PWA app shell
 
-For the current cleanup phase, diagnostics-only files remain at their existing root URLs. Classification is safer than moving them before compatibility is established.
+Diagnostics remain at existing root URLs for compatibility.
 
 ## 4. Apps Script source directories
 
@@ -112,24 +114,19 @@ Canonical current source:
 Historical comparison snapshot:
 - `snapshots/Code.pre-p15-bootstrap.gs`
 
-Documentation:
-- `README.md`
-
 ### `apps-script/admin-backend/`
 
 Purpose: protected Admin authentication and write backend.
 
 Canonical current source set:
-- `Code.gs` — verified live P9 OAuth/session root
+- `Code.gs`
 - `Router.gs`
 - `Validators.gs`
 - `Gate.gs`
 - `PlaceMemos.gs`
 
-Historical root snapshot:
+Historical snapshot:
 - `snapshots/Code.branch-base.gs`
-
-The historical snapshot predates the production `admin_api` route and is not current source-of-truth.
 
 ### `apps-script/admin/`
 
@@ -147,42 +144,51 @@ Current authority documents:
 - `docs/CURRENT_PROJECT_STATUS.md` — current milestone / production state
 - `docs/APPS_SCRIPT_SOURCE_MAP.md` — backend source authority and deployment boundaries
 - `docs/MAIN_BRANCH_MAP.md` — runtime file classification
-- `docs/TRAVELER_RUNTIME_EXECUTION_MAP.md` — verified Traveler ownership and load-order contract
-- `docs/DIAGNOSTICS.md` — root support/diagnostic page classification
+- `docs/TRAVELER_RUNTIME_EXECUTION_MAP.md` — Traveler ownership/load-order contract
+- `docs/DIAGNOSTICS.md` — support/diagnostic page classification
 
-Historical milestone documents are archived under:
+Historical milestone documents:
 - `docs/history/`
 
-Files in `docs/history/` are retained for audit and rollback context only. They do not override current authority documents.
+Historical docs do not override current authority documents.
 
-## 6. Known technical debt
+## 6. P16 completion state
+
+- P16.1 Interaction Core / first-click stability: PASS
+- P16.2 Admin Places / Itinerary UX: PASS
+- P16.3 Mobility Integration: PASS
+- P16.3.1 Admin Bootstrap Reliability: PASS
+- P16.4 safe repository/runtime cleanup: COMPLETE
+
+## 7. Known technical debt deferred to P17
 
 ### Traveler
-- core data/date/dispatch ownership is now consolidated under `p16-runtime-core.js`
-- Maps helpers are consolidated under `p7maps-shared.js`
-- PlaceMemo post-render wrappers are removed; memo rendering is native in Today/Trip/Map
-- `app.js` still contains legacy base implementations that are overridden by final owners and can be reduced in a later dedicated cleanup
-- historical P-numbered files remain as separate active renderer/helper modules
+- `app.js` still contains legacy base implementations overridden by final owners
+- active renderer/helper modules retain historical P-numbered filenames
+- lifecycle/API adapter formalization remains future architecture work
 
 ### Admin
 - `admin.html` performs string-patch composition over `admin-p11.html`
-- large single-file Admin UI
-- manual Apps Script deployment can drift from GitHub if not synchronized
+- `admin-p11.html` remains a large single-file UI/runtime
+- `session_check` followed by protected bootstrap retains some duplicated authorization/read work, intentionally unchanged while stable
 
-### Repository
-- historical P* filenames mix production runtime and diagnostics
-- `p9-auth-poc.html` has a misleading historical filename but is production-required
-- `p15-bootstrap.js` is now dormant but intentionally retained for historical/architecture reference
-- diagnostics-only pages remain in root to preserve compatibility during cleanup
-- historical docs are isolated under `docs/history/`
+### Backend / deployment
+- manual Apps Script deployment can drift from GitHub source
+- deeper Admin bootstrap caching/read optimization remains deferred
 
-## 7. Safe cleanup policy
+### Compatibility files retained intentionally
+- production OAuth callback page
+- diagnostics/support pages
+- active Admin fallback body
+- Apps Script historical snapshots
+
+## 8. Safe cleanup policy
 
 Before deleting, renaming, moving, or consolidating any production-looking file:
 
-1. Check whether `index.html`, `admin.html`, `admin-p11.html`, `sw.js`, or another runtime file references it.
-2. Check `docs/README.md`, `docs/MAIN_BRANCH_MAP.md`, `docs/TRAVELER_RUNTIME_EXECUTION_MAP.md`, `docs/DIAGNOSTICS.md`, and `docs/APPS_SCRIPT_SOURCE_MAP.md`.
-3. Confirm the live Apps Script deployment/source role if backend-related.
-4. Separate repository/layout cleanup from behavior fixes.
-5. Compare behavior against functional baseline commit `55fd670eb4a2baa33e3d09ee12affad6e56c58be` if any regression appears.
-6. If a frontend cleanup may require Google Cloud Console / OAuth / Maps configuration changes, stop before implementation and inform the project owner first.
+1. Check `index.html`, `admin.html`, `admin-p11.html`, and `sw.js` references.
+2. Check current authority docs.
+3. Confirm Apps Script deployment/source role for backend files.
+4. Separate repository/layout cleanup from behavior changes.
+5. Compare against functional baseline `55fd670eb4a2baa33e3d09ee12affad6e56c58be` if any regression appears.
+6. If cleanup may require Google Cloud Console / OAuth / Maps external configuration changes, stop before implementation and inform the project owner first.
