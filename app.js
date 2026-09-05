@@ -124,4 +124,4 @@ function bindDateControls(){document.querySelectorAll("[data-date]").forEach(b=>
 async function renderCurrent(force=false){try{if(state.view==="today")return await renderToday(force);if(state.view==="trip")return await renderTrip(force);if(state.view==="bookings")return await renderBookings(force);if(state.view==="map")return await renderMap(force);return renderMore()}catch(e){failed(e)}}
 document.querySelectorAll(".nav-item").forEach(b=>b.onclick=async()=>{document.querySelectorAll(".nav-item").forEach(x=>x.classList.remove("active"));b.classList.add("active");state.view=b.dataset.view;await renderCurrent()});
 refreshBtn.onclick=async()=>{state.cache.clear();await renderCurrent(true)};
-renderCurrent();
+if(!window.TRAVEL_PLANNER_DEFER_INITIAL_RENDER)renderCurrent();
