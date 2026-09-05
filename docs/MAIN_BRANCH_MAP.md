@@ -30,6 +30,9 @@ p8.js
 p14-place-memos-traveler.js
 ```
 
+Detailed verified ownership/execution map:
+- `docs/TRAVELER_RUNTIME_EXECUTION_MAP.md`
+
 ### Important
 
 The P-numbered filenames are historical, but several are still active production runtime dependencies.
@@ -131,6 +134,7 @@ Current authority documents:
 - `docs/CURRENT_PROJECT_STATUS.md` — current milestone / production state
 - `docs/APPS_SCRIPT_SOURCE_MAP.md` — backend source authority and deployment boundaries
 - `docs/MAIN_BRANCH_MAP.md` — runtime file classification
+- `docs/TRAVELER_RUNTIME_EXECUTION_MAP.md` — verified Traveler global ownership and load-order contract
 - `docs/DIAGNOSTICS.md` — root support/diagnostic page classification
 
 Historical milestone documents are archived under:
@@ -143,9 +147,10 @@ Files in `docs/history/` are retained for audit and rollback context only. They 
 ### Traveler
 - patch-on-patch global overrides
 - runtime behavior depends on script load order
-- more than one layer defines `api`, `ensureDates`, or render functions
+- final `api` owner is `p4.js`, not `p15-bootstrap.js`
+- final `ensureDates` owner is `p7.js`, not `p15-bootstrap.js`
+- render ownership is split across `app.js`, `p4.js`, `p7map.js`, `p7today.js`, `p8.js`, and the P14 wrappers
 - async render lifecycle has no single owner
-- P15 bootstrap intent and actual final global API composition need dedicated verification before refactoring
 
 ### Admin
 - `admin.html` performs string-patch composition over `admin-p11.html`
@@ -163,7 +168,8 @@ Files in `docs/history/` are retained for audit and rollback context only. They 
 Before deleting, renaming, moving, or consolidating any production-looking file:
 
 1. Check whether `index.html`, `admin.html`, `admin-p11.html`, `sw.js`, or another runtime file references it.
-2. Check `docs/README.md`, `docs/MAIN_BRANCH_MAP.md`, `docs/DIAGNOSTICS.md`, and `docs/APPS_SCRIPT_SOURCE_MAP.md`.
+2. Check `docs/README.md`, `docs/MAIN_BRANCH_MAP.md`, `docs/TRAVELER_RUNTIME_EXECUTION_MAP.md`, `docs/DIAGNOSTICS.md`, and `docs/APPS_SCRIPT_SOURCE_MAP.md`.
 3. Confirm the live Apps Script deployment/source role if backend-related.
 4. Separate repository/layout cleanup from behavior fixes.
 5. Compare behavior against functional baseline commit `55fd670eb4a2baa33e3d09ee12affad6e56c58be` if any regression appears.
+6. If a frontend cleanup may require Google Cloud Console / OAuth / Maps configuration changes, stop before implementation and inform the project owner first.
