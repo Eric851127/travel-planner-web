@@ -3,6 +3,7 @@
 Last synchronized: 2026-09-05
 
 Current production baseline: **P15.3**
+Functional regression baseline commit: `55fd670eb4a2baa33e3d09ee12affad6e56c58be`
 
 This document is the current milestone/source-of-truth summary. When old branches, PRs, historical docs, or chat history conflict with this file, verify against GitHub `main`, `docs/APPS_SCRIPT_SOURCE_MAP.md`, and the two live Apps Script projects.
 
@@ -64,15 +65,23 @@ Canonical source map:
 Directory:
 `apps-script/admin-backend/`
 
-Current canonical deployed-module snapshots:
+Canonical current source set:
+- `Code.gs` — verified live P9 OAuth/session root source
 - `Router.gs`
 - `Validators.gs`
 - `Gate.gs`
 - `PlaceMemos.gs`
 
-`Code.branch-base.gs` is an incomplete historical root snapshot and is not safe to deploy over the live P9 root file.
+Historical root snapshot:
+- `snapshots/Code.branch-base.gs`
 
-The live `Travel Planner P9 Auth PoC` root `Code.gs` remains authoritative until a verbatim production copy is committed.
+The verified `Code.gs` includes the production route:
+
+```js
+if (mode === 'admin_api') return p10AdminApi_(e);
+```
+
+The previous GitHub source-of-truth gap for the Admin root P9 file is therefore closed.
 
 ### Traveler public API
 
@@ -83,9 +92,9 @@ Canonical current source:
 - `Code.gs`
 
 Historical comparison snapshot:
-- `Code.current-production.gs`
+- `snapshots/Code.pre-p15-bootstrap.gs`
 
-`Code.current-production.gs` must not be treated as current production source.
+The snapshot contains public PlaceMemos support but predates P15.1 `traveler_bootstrap` and must not be treated as current production source.
 
 ### Legacy Admin
 
@@ -230,6 +239,7 @@ The exact P15 bootstrap/API composition should be treated as an architecture inv
 - keep source-of-truth docs synchronized
 - clearly label canonical vs historical Apps Script snapshots
 - document runtime vs diagnostic root files
+- keep manual Apps Script deployments synchronized back to GitHub
 
 ### P16 product/UX work
 - render/date/group switching stability
@@ -242,7 +252,6 @@ The exact P15 bootstrap/API composition should be treated as an architecture inv
 - define one formal render lifecycle
 - define one formal data/API adapter lifecycle
 - consolidate Admin wrapper/base UI when safe
-- commit a verbatim full production P9 root `Code.gs`
 
 Do not mix P17 architecture cleanup into a small P16 behavior fix.
 
@@ -251,4 +260,4 @@ Do not mix P17 architecture cleanup into a small P16 behavior fix.
 See:
 `docs/MAIN_BRANCH_MAP.md`
 
-This file classifies active runtime, diagnostics, Apps Script snapshots, legacy fallback, and known technical debt so old P-numbered filenames are not accidentally removed or reordered.
+This file classifies active runtime, diagnostics, Apps Script canonical sources/snapshots, legacy fallback, and known technical debt so old P-numbered filenames are not accidentally removed or reordered.
