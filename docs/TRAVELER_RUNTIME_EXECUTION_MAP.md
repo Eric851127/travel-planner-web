@@ -15,11 +15,14 @@ This document records the **actual runtime ownership after all Traveler scripts 
 3. p15-bootstrap.js
 4. p4.js
 5. p7.js
-6. p7map.js
-7. p7today.js
-8. p8.js
-9. p14-place-memos-traveler.js
+6. p7maps-shared.js
+7. p7map.js
+8. p7today.js
+9. p8.js
+10. p14-place-memos-traveler.js
 ```
+
+`p7maps-shared.js` is a pure shared Maps dependency inserted after `p7.js`. The relative order of the pre-existing production runtime files remains unchanged.
 
 `index.html` sets:
 
@@ -33,7 +36,7 @@ before loading them, then sets it back to `false` and calls:
 await renderCurrent(false);
 ```
 
-after all nine files load.
+after all runtime files load.
 
 The sequence is therefore part of current production behavior.
 
@@ -82,6 +85,24 @@ Important consequence:
 
 The P15.1 bootstrap-backed `ensureDates` is **not** the final implementation in production.
 
+### `TRAVEL_PLANNER_MAPS`
+
+`p7maps-shared.js` is now the single shared owner for Traveler Google Maps helper behavior:
+
+- storage key `travelPlanner.googleMaps.v1`
+- settings read/save/clear
+- Google Maps JavaScript API loader promise
+- coordinate parsing/validation
+- place search URL
+- directions URL
+
+Consumers:
+- `p7map.js`
+- `p7today.js`
+- `p8.js`
+
+It does **not** own map rendering or view state.
+
 ### `renderToday`
 
 1. `app.js` defines the original Today renderer.
@@ -101,7 +122,7 @@ The P15.1 bootstrap-backed `ensureDates` is **not** the final implementation in 
 ### `renderMap`
 
 1. `app.js` defines the base list-style map renderer.
-2. `p7map.js` replaces it with Google Maps JavaScript API rendering and local Maps configuration.
+2. `p7map.js` replaces it with Google Maps JavaScript API rendering and shared Maps configuration/runtime helpers.
 3. `p14-place-memos-traveler.js` wraps it to decorate PlaceMemos.
 
 **Final callable: P14 wrapper around `p7map.js` renderer.**
@@ -144,19 +165,20 @@ Because it resolves renderer globals at call time, it dispatches to the later P7
 After all files load, the important global composition is approximately:
 
 ```text
-jsonp            -> p7network.js
-api               -> p4.js
-ensureDates       -> p7.js
-bindDateControls  -> p7.js wrapper(app.js)
-renderCurrent     -> p4.js
-renderToday       -> p14 wrapper(p7today.js)
-renderTrip        -> p14 wrapper(app.js)
-renderMap         -> p14 wrapper(p7map.js)
-renderBookings    -> p4.js
-renderMore        -> p8.js
+jsonp               -> p7network.js
+api                  -> p4.js
+ensureDates          -> p7.js
+TRAVEL_PLANNER_MAPS  -> p7maps-shared.js
+bindDateControls     -> p7.js wrapper(app.js)
+renderCurrent        -> p4.js
+renderToday          -> p14 wrapper(p7today.js)
+renderTrip           -> p14 wrapper(app.js)
+renderMap            -> p14 wrapper(p7map.js)
+renderBookings       -> p4.js
+renderMore           -> p8.js
 ```
 
-This is the verified P15.3 runtime contract.
+This remains the verified P15.3 behavior boundary plus the Phase A shared-helper consolidation.
 
 ## 4. P15 bootstrap reality
 
@@ -173,13 +195,13 @@ Any future bootstrap consolidation must be treated as an architecture migration 
 
 ## 5. Google Maps external contract
 
-`p7map.js` and `p7today.js` dynamically load:
+`p7maps-shared.js` dynamically loads:
 
 ```text
 https://maps.googleapis.com/maps/api/js
 ```
 
-using the locally stored Maps API key, and use a JavaScript Map ID.
+using the locally stored Maps API key, and consumers continue to use the same JavaScript Map ID.
 
 Current storage key:
 
@@ -218,13 +240,13 @@ Those are external/auth contracts and require a separate migration decision.
 
 Before merging runtime files, use this order:
 
-1. Preserve the current script order.
+1. Preserve the current relative order of existing production scripts.
 2. Consolidate pure helpers/display functions first.
 3. Establish one API adapter only after reproducing the effective P4 request contract and P7.7 resilience behavior.
 4. Establish one date-selection owner only after preserving P7 smart-date/user-selection semantics.
 5. Consolidate renderers one surface at a time.
 6. Keep P14 memo decoration behavior until memos are rendered natively by each final renderer.
-7. Change `index.html` script list only after the replacement runtime is behavior-equivalent.
+7. Change the legacy script list only after the replacement runtime is behavior-equivalent.
 8. Smoke-test Safari + installed PWA + Admin navigation before deleting historical runtime files.
 
 Do not combine script consolidation with unrelated P16 UX changes.
