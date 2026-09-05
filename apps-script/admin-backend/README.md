@@ -1,29 +1,42 @@
-# Admin backend source snapshot
+# Admin backend
 
 Live Apps Script project: `Travel Planner P9 Auth PoC`
 
-This directory is the canonical GitHub location for the protected Admin backend.
+Functional regression baseline commit: `55fd670eb4a2baa33e3d09ee12affad6e56c58be`
 
-Files:
-- `Code.branch-base.gs`: P9 auth/session base recovered from the historical backend branch.
-- `Router.gs`: P10 protected Admin API router, including PlaceMemos actions.
-- `Validators.gs`: P10 validators and Sheet helpers.
-- `Gate.gs`: P10 CRUD/self-test gate.
-- `PlaceMemos.gs`: P14 PlaceMemo validator.
+This directory is the canonical GitHub source location for the protected Admin backend.
 
-## Production delta that must not be lost
+## Canonical source
 
-The live production P9 `Code.gs` supplied during P14 contains this extra route inside `doPost(e)`:
+- `Code.gs` — verified live P9 auth/session root source supplied from the currently working Apps Script project
+- `Router.gs` — protected P10 Admin API router/bootstrap, including PlaceMemos actions
+- `Validators.gs` — CRUD validators and Sheet helpers
+- `Gate.gs` — P10 diagnostic CRUD/self-test gate
+- `PlaceMemos.gs` — P14 PlaceMemo validation
+
+The current `Code.gs` includes the production Admin API bridge inside `doPost(e)`:
 
 ```js
 if (mode === 'admin_api') return p10AdminApi_(e);
 ```
 
-The historical branch copy does not contain that line. Therefore `Code.branch-base.gs` is intentionally NOT named `Code.gs` and must not be pasted over production as-is.
+That route connects the P9 auth/session root to `Router.gs` while preserving server-side session and Members authorization checks.
 
-Until the full production `Code.gs` is committed verbatim, the production authority is:
-1. the live `Travel Planner P9 Auth PoC` Apps Script project,
-2. the previously supplied production Code.gs snapshot,
-3. the files in this directory plus the routing delta above.
+## Historical snapshots
 
-Do not add Traveler public GET resources to this project. Traveler reads belong to the separate `Travel Planner` public API.
+Historical root snapshots live under:
+
+`apps-script/admin-backend/snapshots/`
+
+Current archived snapshot:
+- `Code.branch-base.gs`
+
+It predates the production `admin_api` route and must not be deployed as the current root file.
+
+## Source-of-truth rule
+
+For normal development, the source set in this directory is the canonical GitHub representation of the protected Admin backend.
+
+A manual Apps Script deployment can still drift from GitHub. Whenever production is changed directly in Apps Script, synchronize the matching GitHub source before or immediately after deployment and update `docs/CURRENT_PROJECT_STATUS.md` when behavior changes.
+
+Do not add Traveler anonymous reads to this project. Traveler public reads belong to the separate `Travel Planner` public API under `apps-script/traveler-public-api/`.
