@@ -1,9 +1,9 @@
 # Traveler Runtime Execution Map
 
 Functional regression baseline commit: `55fd670eb4a2baa33e3d09ee12affad6e56c58be`
-Phase A/B/C consolidation verified against `main` on 2026-09-05.
+P16 runtime consolidation verified on 2026-09-05.
 
-This document records the current Traveler runtime ownership after the cleanup consolidation.
+This document records the current Traveler runtime ownership after P16 cleanup.
 
 ## 1. Loader contract
 
@@ -36,7 +36,7 @@ await renderCurrent(false);
 
 `p16-runtime-core.js` is intentionally loaded last so it is the explicit final owner of core runtime functions.
 
-## 2. Core ownership after Phase C
+## 2. Core ownership
 
 ### `jsonp`
 
@@ -48,13 +48,13 @@ Responsibility:
 - callback cleanup
 - cache-busting request marker
 
-`p7network.js` no longer defines resource `api()`.
+`p7network.js` does not own resource `api()`.
 
 ### `api`
 
 Final owner: `p16-runtime-core.js`
 
-Current production request contract remains the previously effective P4 contract:
+Production request contract:
 
 ```text
 GET <Apps Script exec URL>?resource=<resource>&...
@@ -64,32 +64,33 @@ Behavior preserved:
 - group values expand from `ours` / `friends` to `<group>,all`
 - `_ts` request cache busting
 - in-memory `state.cache`
-- JSONP transport through the current global `jsonp`
-- 18-second API-level JSONP timeout request
-
-Phase C does not switch production back to the dormant P15 bootstrap adapter.
+- JSONP transport through current global `jsonp`
+- API timeout contract remains unchanged
 
 ### `ensureDates`
 
 Final owner: `p16-runtime-core.js`
 
-Behavior preserved from the previously effective P7 implementation:
+Behavior:
 - read itinerary dates through current `api()`
 - unique + sorted date list
 - preserve a user-selected valid date
 - otherwise select `travelPlannerSmartTripDate(state.dates)`
 
-### `bindDateControls`
+### Interaction ownership
 
 Final owner: `p16-runtime-core.js`
 
-It uses the original `app.js` binding as its base and adds the existing P7 user-selection marker:
+P16.1 consolidates:
+- date arrows / date select
+- general group filters
+- Today group filters through delegation
+- bottom navigation
+- refresh
+- retry
+- interaction Promise scheduling
 
-```text
-state.__dateSelectedByUser = true
-```
-
-No wrapper chain remains.
+This removed the first-click / double-click interaction race that previously appeared after initial load or view switching.
 
 ### `renderCurrent`
 
@@ -102,7 +103,7 @@ It dispatches at call time to:
 - `renderMap`
 - `renderMore`
 
-It retains the existing retry UI and clears `state.cache` before a forced retry. It also clears the PlaceMemo runtime cache when available.
+It retains retry UI and clears `state.cache` before a forced retry. It also clears the PlaceMemo runtime cache when available.
 
 ## 3. Renderer ownership
 
@@ -115,18 +116,25 @@ renderMore      -> p8.js
 renderCurrent   -> p16-runtime-core.js
 ```
 
-PlaceMemo rendering is native to Today / Trip / Map renderers. The old P14 render-wrapper and post-render DOM decorator chain has been removed.
+PlaceMemo rendering is native to Today / Trip / Map renderers.
+
+P16.3 Mobility integration adds:
+- Flight + Transport unified as Traveler mobility segments
+- Today view `今日移動`
+- Trip view per-day mobility sections
+- explicit `transport_id` relation rendering when present
+- Flight and Transport schemas remain separate
 
 ## 4. Shared helper ownership
 
 ### Smart date / display labels
 
-`p7.js` now owns helpers only:
+`p7.js` owns helpers:
 - `window.travelPlannerSmartTripDate`
 - `window.travelPlannerGroupLabel`
 - legacy text relabel observer
 
-It no longer overrides `ensureDates` or `bindDateControls`.
+It does not override final core ownership.
 
 ### Google Maps
 
@@ -151,16 +159,20 @@ Consumers:
 - PlaceMemo styles
 - native Trip renderer
 
-## 5. P15 bootstrap status after Phase C
+## 5. Removed dormant P15 bootstrap
 
-`p15-bootstrap.js` remains in the repository for historical comparison and future deliberate architecture work, but is no longer loaded by `index.html` and is no longer part of the PWA app shell.
+`p15-bootstrap.js` was removed from `main` during P16.4.
 
-Reason:
-- before Phase C, its `api` and `ensureDates` overrides were themselves overwritten later by P4/P7
-- `TRAVEL_PLANNER_BOOTSTRAP` had no production consumer
-- reactivating it by moving load order previously caused an `API 載入失敗` regression
+Before removal it was already:
+- not loaded by `index.html`
+- not part of the PWA app shell
+- not consumed by production runtime
 
-Therefore P15 bootstrap is **dormant / non-runtime**. Do not re-add it to the production loader as a cleanup-only change.
+Git history remains the archive for comparison if needed.
+
+Reason it must not be reintroduced casually:
+- earlier attempts to reactivate its adapter by changing load order caused a Traveler `API 載入失敗` regression
+- current production ownership is explicitly consolidated elsewhere
 
 ## 6. Effective production composition
 
@@ -169,6 +181,9 @@ jsonp                      -> p7network.js
 api                        -> p16-runtime-core.js
 ensureDates                -> p16-runtime-core.js
 bindDateControls           -> p16-runtime-core.js
+bindFilters                -> p16-runtime-core.js
+nav / refresh / retry      -> p16-runtime-core.js
+Today group interaction    -> p16-runtime-core.js via p7today delegation
 renderCurrent              -> p16-runtime-core.js
 travelPlannerSmartTripDate -> p7.js
 travelPlannerGroupLabel    -> p7.js
@@ -181,11 +196,9 @@ renderMap                  -> p7map.js
 renderMore                 -> p8.js
 ```
 
-This replaces the old patch-on-patch core ownership contract.
-
 ## 7. Google Cloud / OAuth external contract
 
-Phase C does not require Google Cloud Console changes.
+P16 does not require Google Cloud Console changes.
 
 Unchanged external contracts:
 - GitHub Pages origin/domain
@@ -205,4 +218,4 @@ If any Traveler cleanup regression appears, compare behavior against:
 
 `55fd670eb4a2baa33e3d09ee12affad6e56c58be`
 
-Phase C must preserve the effective production behavior from that baseline even though ownership and file responsibilities are now cleaner.
+P16 cleanup must preserve the effective production behavior from that baseline even though ownership and file responsibilities are now cleaner.
