@@ -26,7 +26,7 @@
   var loadMarker="$('authPanel').innerHTML='';$('adminPanel').hidden=false;$('addBtn').hidden=false;$('logoutBtn').hidden=false;";
   var loadReplacement="$('authPanel').innerHTML='';$('adminPanel').hidden=false;$('addBtn').hidden=false;$('travelerBtn').hidden=false;$('logoutBtn').hidden=false;";
   var bodyMarker='</body>';
-  var adminModules='<script src="p14-place-memos-admin.js"><\/script><script src="p16-admin-places-ux.js?v=p16-2-20260905-2"><\/script></body>';
+  var adminModules='<script src="p14-place-memos-admin.js"><\/script><script src="p16-admin-places-ux.js?v=p16-3-20260905-1"><\/script><script src="p16-admin-mobility-detail.js?v=p16-3-20260905-1"><\/script></body>';
 
   fetch('admin-p11.html',{cache:'no-store'})
     .then(function(response){if(!response.ok)throw new Error('ADMIN_LOAD_FAILED');return response.text();})
