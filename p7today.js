@@ -67,19 +67,34 @@
     return `<div class="map-info-window"><strong>${esc(place?.name || '地點')}</strong>${label ? `<div>${esc(label)}</div>` : ''}${place?.address ? `<div>${esc(place.address)}</div>` : ''}${maps ? `<a href="${esc(maps)}" target="_blank" rel="noopener noreferrer">Google Maps ↗</a>` : ''}</div>`;
   }
 
+  function bindTodayMapInteraction() {
+    const enter = document.getElementById('todayMapEnter');
+    const done = document.getElementById('todayMapDone');
+    if (!enter || !done || !todayMap) return;
+    const setInteractive = interactive => {
+      todayMap.setOptions({ gestureHandling: interactive ? 'greedy' : 'none' });
+      enter.hidden = interactive;
+      done.hidden = !interactive;
+    };
+    enter.onclick = () => setInteractive(true);
+    done.onclick = () => setInteractive(false);
+    setInteractive(false);
+  }
+
   async function drawTodayMap(stops, hotels, placeById) {
     const node = document.getElementById('todayTravelMap');if (!node) return;
     const settings = mapSettings();
     if (!settings.apiKey || !settings.mapId) { node.innerHTML = '<div class="today-map-message">Google Maps 尚未設定。可先到「更多」中的舊地圖設定完成設定。</div>';return; }
     await loadGoogleMaps(settings.apiKey);await google.maps.importLibrary('maps');
     const { AdvancedMarkerElement, PinElement } = await google.maps.importLibrary('marker');
-    todayMap = new google.maps.Map(node,{center:{lat:36.2,lng:138.25},zoom:5,mapId:settings.mapId,mapTypeControl:false,streetViewControl:false,fullscreenControl:false});todayInfo = new google.maps.InfoWindow();
+    todayMap = new google.maps.Map(node,{center:{lat:36.2,lng:138.25},zoom:5,mapId:settings.mapId,mapTypeControl:false,streetViewControl:false,fullscreenControl:false,gestureHandling:'none'});todayInfo = new google.maps.InfoWindow();
     const markerSpecs = [], itineraryPlaceIds = new Set();
     stops.forEach(stop => { const position = coord(stop.place);if (!position || itineraryPlaceIds.has(stop.place.id)) return;itineraryPlaceIds.add(stop.place.id);markerSpecs.push({place:stop.place,position,glyph:String(stop.number),label:`今日行程 ${stop.number}`}); });
     hotels.forEach(hotel => { const place=placeById.get(hotel.place_id),position=coord(place);if(!place||!position||itineraryPlaceIds.has(place.id))return;markerSpecs.push({place,position,glyph:'🛏',label:'今晚住宿'}); });
     if (!markerSpecs.length) { node.innerHTML='<div class="today-map-message">今天的行程尚無可顯示座標。</div>';return; }
     const bounds=new google.maps.LatLngBounds();markerSpecs.forEach(spec=>{const pin=new PinElement({glyph:spec.glyph,scale:1.08});const marker=new AdvancedMarkerElement({map:todayMap,position:spec.position,title:spec.place.name||'地點',content:pin.element});marker.addListener('click',()=>{todayInfo.setContent(infoHtml(spec.place,spec.label));todayInfo.open({map:todayMap,anchor:marker});});bounds.extend(spec.position);});
     if(markerSpecs.length===1){todayMap.setCenter(markerSpecs[0].position);todayMap.setZoom(14);}else todayMap.fitBounds(bounds,44);
+    bindTodayMapInteraction();
   }
 
   function plannedTransportHtml(transport, fromPlace, toPlace) {
@@ -104,7 +119,7 @@
       const [items,transports,hotels,places,flights]=await Promise.all([api('itinerary',{date:state.date,group},force),api('transport',{date:state.date,group},force),api('hotels',{group},force),api('places',{},force),api('flights',{date:state.date,group},force),window.TRAVEL_PLANNER_PLACE_MEMOS?window.TRAVEL_PLANNER_PLACE_MEMOS.load(force):Promise.resolve([])]);
       const placeById=new Map(places.map(p=>[p.id,p]));activePlaceById=placeById;
       const stops=itineraryStops(items,placeById),tonight=activeHotels(hotels,state.date);
-      app.innerHTML=`<section class="section today-controls">${dateNav()}${todayGroupFilters()}</section>${mobilityHtml(flights,transports,placeById)}<section class="section map-section"><div class="map-heading-row"><h2>今日地圖</h2><span class="badge">${esc(groupDisplayName(currentGroup()))}</span></div><div id="todayTravelMap" class="travel-map today-travel-map" aria-label="今日行程地圖"></div></section><section class="section"><h2>今日行程</h2>${routeHtml(stops,transports)}</section><section class="section"><h2>今晚住宿</h2>${hotelsHtml(tonight,placeById)}</section>`;
+      app.innerHTML=`<section class="section today-controls">${dateNav()}${todayGroupFilters()}</section>${mobilityHtml(flights,transports,placeById)}<section class="section map-section"><div class="map-heading-row"><h2>今日地圖</h2><span class="badge">${esc(groupDisplayName(currentGroup()))}</span></div><div style="position:relative"><div id="todayTravelMap" class="travel-map today-travel-map" aria-label="今日行程地圖"></div><button id="todayMapEnter" type="button" style="position:absolute;left:50%;bottom:14px;z-index:5;transform:translateX(-50%);border:1px solid rgba(0,0,0,.08);border-radius:999px;background:rgba(255,255,255,.94);box-shadow:0 4px 16px rgba(20,24,35,.16);padding:10px 16px;color:#16181d;font-weight:800;white-space:nowrap">點一下操作地圖</button><button id="todayMapDone" type="button" hidden style="position:absolute;right:12px;top:12px;z-index:5;border:1px solid rgba(0,0,0,.08);border-radius:999px;background:rgba(255,255,255,.96);box-shadow:0 4px 16px rgba(20,24,35,.16);padding:9px 14px;color:#1f6feb;font-weight:800">完成</button></div></section><section class="section"><h2>今日行程</h2>${routeHtml(stops,transports)}</section><section class="section"><h2>今晚住宿</h2>${hotelsHtml(tonight,placeById)}</section>`;
       bindDateControls();bindTodayGroupFilters();drawTodayMap(stops,tonight,placeById).catch(error=>{console.error('P7.8 today map failed',error);const node=document.getElementById('todayTravelMap');if(node)node.innerHTML=`<div class="today-map-message">地圖載入失敗：${esc(error?.message||'未知錯誤')}</div>`;});
     };
     state.group=localStorage.getItem(GROUP_KEY)==='friends'?'friends':'ours';state.view='today';document.querySelectorAll('.nav-item').forEach(item=>item.classList.toggle('active',item.dataset.view==='today'));if(!window.TRAVEL_PLANNER_DEFER_INITIAL_RENDER)renderCurrent(false);
