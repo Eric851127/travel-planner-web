@@ -53,11 +53,13 @@
       script.src = url.toString();
       script.async = true;
       script.defer = true;
+      const timer = setTimeout(() => { script.remove(); reject(new Error('Google Maps 載入逾時')); }, 15000);
       script.onload = () => {
+        clearTimeout(timer);
         if (window.google && window.google.maps) resolve(window.google.maps);
         else reject(new Error('Google Maps 載入完成但 API 未初始化'));
       };
-      script.onerror = () => reject(new Error('Google Maps JavaScript API 載入失敗'));
+      script.onerror = () => { clearTimeout(timer); script.remove(); reject(new Error('Google Maps JavaScript API 載入失敗')); };
       document.head.appendChild(script);
     }).catch(error => {
       mapsPromise = null;

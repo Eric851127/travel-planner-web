@@ -12,7 +12,7 @@
     const mapsReady = !!(maps.apiKey && maps.mapId);
     const installed = standalone();
     return `<div class="stack p8-more">
-      <div class="card p8-app-card"><div class="p8-app-icon">✈</div><div><h2>Travel Planner</h2><div class="meta">P12 · GitHub Admin Cutover</div></div></div>
+      <div class="card"><h2>旅程地點</h2><p class="meta">按日期查看主線與附近選項，也可瀏覽完整地點清單。</p><button id="openTripMap" class="p8-primary-action" type="button">開啟旅程地圖</button></div><div class="card p8-app-card"><div class="p8-app-icon">✈</div><div><h2>Travel Planner</h2><div class="meta">P12 · GitHub Admin Cutover</div></div></div>
       <div class="card"><div class="p8-setting-head"><div><div class="summary-kicker">管理</div><h3>編輯旅程</h3></div><span class="badge confirmed">已連接</span></div><div class="meta p8-setting-copy">管理端已整合到 Travel Planner PWA。進入編輯模式後仍維持在 GitHub Pages／PWA 範圍內，並透過受保護的 Admin API 存取資料。</div><button class="p8-primary-action" id="openAdminBtn" type="button">⚙️ 進入編輯模式</button></div>
       <div class="card"><div class="p8-setting-head"><div><div class="summary-kicker">地圖</div><h3>Google Maps</h3></div><span class="badge ${mapsReady?'confirmed':'tentative'}">${mapsReady?'已設定':'尚未設定'}</span></div><div class="meta p8-setting-copy">Maps 設定只儲存在這台裝置；第一次使用時設定一次即可。</div><div class="p8-url-setup"><label><strong>Maps API Key</strong><input id="p8MapApiKey" type="text" autocomplete="off" spellcheck="false" placeholder="AIza…" value="${esc(maps.apiKey)}"></label><label><strong>Map ID</strong><input id="p8MapId" type="text" autocomplete="off" spellcheck="false" placeholder="JavaScript Map ID" value="${esc(maps.mapId)}"></label><button class="p8-primary-action" id="saveMapsBtn" type="button">${mapsReady?'更新 Google Maps 設定':'儲存 Google Maps 設定'}</button>${mapsReady?'<button class="p8-text-action" id="clearMapsBtn" type="button">清除地圖設定</button>':''}<div id="mapsStatus" class="meta"></div></div></div>
       <div class="card"><div class="p8-setting-head"><div><div class="summary-kicker">手機</div><h3>加入主畫面</h3></div><span class="badge ${installed?'confirmed':''}">${installed?'App 模式':'PWA'}</span></div><div class="meta p8-setting-copy">${installed?'目前已經以獨立 App 視窗開啟。':isIos()?'iPhone：Safari 分享 → 加入主畫面。':'支援的瀏覽器可將 Travel Planner 安裝到主畫面。'}</div>${!installed&&!isIos()?'<button class="p8-primary-action" id="installAppBtn" type="button">＋ 安裝 Travel Planner</button>':''}</div>
@@ -20,6 +20,7 @@
   }
 
   function bindMore() {
+    document.getElementById('openTripMap').onclick=()=>window.TRAVEL_PLANNER_INTERACTIONS.schedule(async()=>{state.view='map';await renderCurrent(false);});
     const open = document.getElementById('openAdminBtn');
     if (open) open.onclick = () => { window.location.href = ADMIN_PATH; };
     const saveMaps=document.getElementById('saveMapsBtn');
@@ -30,5 +31,5 @@
   window.addEventListener('beforeinstallprompt',event=>{event.preventDefault();installPrompt=event;if(state.view==='more')renderMore();});
   window.addEventListener('appinstalled',()=>{installPrompt=null;if(state.view==='more')renderMore();});
   try{renderMore=function(){pageTitle.textContent='更多';app.innerHTML=moreHtml();bindMore();};}catch(error){console.error('P12 patch failed',error);}
-  if('serviceWorker'in navigator)window.addEventListener('load',()=>navigator.serviceWorker.register('./sw.js').catch(error=>console.warn('PWA service worker failed',error)));
+  if(!config.preview&&'serviceWorker'in navigator)window.addEventListener('load',()=>navigator.serviceWorker.register('./sw.js').catch(error=>console.warn('PWA service worker failed',error)));
 })();

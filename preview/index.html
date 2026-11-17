@@ -1,0 +1,73 @@
+<!doctype html>
+<html lang="zh-Hant">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+<meta name="theme-color" content="#f6f7f9">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="default">
+<meta name="apple-mobile-web-app-title" content="Travel Planner">
+<title>Travel Planner</title>
+<link rel="manifest" href="../manifest.webmanifest?v=p15-3-20260905">
+<link rel="icon" href="../app-icon.svg?v=p12-20260904" type="image/svg+xml">
+<link rel="apple-touch-icon" href="../app-icon.svg?v=p12-20260904">
+<link rel="stylesheet" href="../styles.css?v=nearby-20261117-1">
+<link rel="preload" href="../app.js?v=p15-3-20260905" as="script">
+<link rel="preload" href="../p7network.js?v=cleanup-20260905-4" as="script">
+<link rel="preload" href="../p4.js?v=cleanup-20260905-4" as="script">
+<link rel="preload" href="../p7.js?v=cleanup-20260905-4" as="script">
+<link rel="preload" href="../p7maps-shared.js?v=cleanup-20260905-2" as="script">
+<link rel="preload" href="../p7map.js?v=nearby-20261117-1" as="script">
+<link rel="preload" href="../p7today.js?v=nearby-20261117-1" as="script">
+<link rel="preload" href="../p8.js?v=nearby-20261117-1" as="script">
+<link rel="preload" href="../p14-place-memos-traveler.js?v=nearby-20261117-1" as="script">
+<link rel="preload" href="../p16-runtime-core.js?v=nearby-20261117-1" as="script">
+<style>
+  #startupScreen{display:none;min-height:100dvh;box-sizing:border-box;padding:calc(24px + env(safe-area-inset-top)) 20px calc(24px + env(safe-area-inset-bottom));background:#f6f7f9;color:#202124;align-items:center;justify-content:center;text-align:center}
+  #startupScreen .startup-card{width:min(360px,100%);padding:28px 20px;border-radius:18px;background:#fff;box-shadow:0 8px 28px rgba(60,64,67,.12)}
+  #startupScreen .startup-mark{font-size:34px;line-height:1;margin-bottom:14px}
+  #startupScreen strong{display:block;font-size:19px;margin-bottom:7px}
+  #startupScreen .startup-meta{font-size:14px;color:#6b7280}
+  body.booting #startupScreen{display:flex}
+  body.booting .app-shell{visibility:hidden;position:absolute;inset:0;pointer-events:none}
+</style>
+</head>
+<body>
+<div id="startupScreen" role="status" aria-live="polite">
+  <div class="startup-card">
+    <div class="startup-mark">✈</div>
+    <strong>正在開啟旅程…</strong>
+    <div class="startup-meta">正在載入最新行程資料</div>
+  </div>
+</div>
+<div class="app-shell">
+<header class="topbar">
+<div><div class="eyebrow">Travel Planner</div><h1 id="pageTitle">今日</h1></div>
+<button id="refreshBtn" class="icon-button" aria-label="重新整理">↻</button>
+</header>
+<div class="preview-banner">設計預覽 · 示意資料 · 未連接正式行程<br>不代表時間、營業或預訂已確認</div><main id="app" class="content"></main>
+<nav class="bottom-nav">
+<button class="nav-item active" data-view="today"><span>●</span><small>今日</small></button>
+<button class="nav-item" data-view="trip"><span>☷</span><small>全旅程</small></button>
+<button class="nav-item" data-view="bookings"><span>□</span><small>預訂</small></button>
+<button class="nav-item" data-view="more"><span>•••</span><small>更多</small></button>
+</nav>
+</div>
+<script>window.TRAVEL_PLANNER_DEFER_INITIAL_RENDER=true;window.TRAVEL_PLANNER_CONFIG={apiBase:'https://example.invalid',defaultGroup:'ours',preview:true};</script>
+<script src="fixtures.js"></script>
+<script src="../app.js"></script>
+<script src="../p7network.js"></script>
+<script src="../p4.js"></script>
+<script src="../p7.js"></script>
+<script src="../p7maps-shared.js"></script>
+<script src="../p7map.js"></script>
+<script src="../p7today.js"></script>
+<script src="../p8.js"></script>
+<script src="../p14-place-memos-traveler.js"></script>
+<script src="../nearby-options.js"></script>
+<script src="../itinerary-ui.js"></script>
+<script src="../p16-runtime-core.js"></script>
+<script>
+api=async function(resource,params={}){const rows=window.TRAVEL_PLANNER_PREVIEW_DATA[resource]||[];return rows.filter(r=>(!params.date||r.date===params.date)&&(!params.group||params.group==='all'||[...String(params.group).split(','),'all'].includes(r.group)));};
+state.cache.clear();renderCurrent(false);
+</script></body></html>

@@ -1,8 +1,11 @@
-/* P7.3 interactive Google Map */
+/* Date-scoped route map. Lists and external navigation remain usable without Maps. */
 (function () {
   let mapInstance = null;
   let infoWindow = null;
   let markerByPlaceId = new Map();
+  let mapDate = null;
+  let mapLayer = 'route';
+  let renderVersion = 0;
 
   function readMapSettings() { return window.TRAVEL_PLANNER_MAPS.readSettings(); }
   function saveMapSettings(apiKey, mapId) { return window.TRAVEL_PLANNER_MAPS.saveSettings(apiKey, mapId); }
@@ -13,10 +16,10 @@
   function memoHtml(placeId) { return window.TRAVEL_PLANNER_PLACE_MEMOS ? window.TRAVEL_PLANNER_PLACE_MEMOS.html(placeId) : ''; }
 
   function mapSetupCard() {
-    return `<section class="stack">
+    return `<details class="card"><summary>地圖設定（選用）</summary><section class="stack">
       <div class="card">
         <h2>啟用旅程地圖</h2>
-        <div class="meta">這台裝置尚未設定 Google Maps。請輸入已限制網站來源的 Maps JavaScript API Key 與 JavaScript Map ID；設定只會存在此瀏覽器。</div>
+        <div class="meta">不設定也能查看地點並開啟外部導航。若要使用內嵌地圖，請輸入已限制網站來源的 Maps JavaScript API Key 與 JavaScript Map ID；設定只會存在此瀏覽器。</div>
       </div>
       <div class="card map-setup-card">
         <label><strong>Maps API Key</strong><input id="mapApiKey" class="map-config-input" type="text" autocomplete="off" spellcheck="false" placeholder="AIza…"></label>
@@ -24,7 +27,7 @@
         <button id="saveMapConfig" class="retry-button" type="button">儲存並載入地圖</button>
         <div id="mapConfigStatus" class="meta"></div>
       </div>
-    </section>`;
+    </section></details>`;
   }
 
   function bindMapSetup() {
@@ -51,7 +54,7 @@
     };
   }
 
-  function placeCard(place, usedIds) {
+  function placeCard(place, usedIds, nearbyIds) {
     const point = coordinates(place);
     const external = googleMapsUrl(place);
     return `<article class="card place-card map-place-card ${point ? 'has-coordinate' : 'missing-coordinate'}" data-place-id="${esc(place.id || '')}">
@@ -60,12 +63,12 @@
           <div class="summary-kicker">${esc(categoryLabel(place.category || ''))}</div>
           <h3>${esc(place.name || '未命名地點')}</h3>
         </div>
-        ${usedIds.has(place.id) ? '<span class="badge confirmed">行程使用</span>' : ''}
+        ${usedIds.has(place.id) ? '<span class="badge confirmed">當日主線</span>' : nearbyIds.has(place.id) ? '<span class="badge">附近可選</span>' : ''}
       </div>
       <div class="meta">${esc(place.city || '')}${place.address ? ` · ${esc(place.address)}` : ''}</div>
       ${memoHtml(place.id)}
       <div class="map-place-actions">
-        ${point ? `<button class="map-focus-button" type="button" data-focus-place="${esc(place.id || '')}">在地圖查看</button>` : '<span class="map-missing-label">尚未設定座標</span>'}
+        ${point ? `<button class="map-focus-button" type="button" disabled data-focus-place="${esc(place.id || '')}">在地圖查看</button>` : '<span class="map-missing-label">尚未設定座標</span>'}
         ${external ? `<a class="map-link" href="${esc(external)}" target="_blank" rel="noopener noreferrer">Google Maps ↗</a>` : ''}
       </div>
     </article>`;
@@ -83,6 +86,7 @@
 
   function bindPlaceFocus(placesById) {
     document.querySelectorAll('[data-focus-place]').forEach(button => {
+      button.disabled = !markerByPlaceId.has(button.dataset.focusPlace);
       button.addEventListener('click', () => {
         const id = button.dataset.focusPlace;
         const entry = markerByPlaceId.get(id);
@@ -97,9 +101,10 @@
     });
   }
 
-  async function drawMap(places, usedIds, mapId) {
+  async function drawMap(places, usedIds, mapId, version) {
     await google.maps.importLibrary('maps');
-    const { AdvancedMarkerElement } = await google.maps.importLibrary('marker');
+    const { AdvancedMarkerElement, PinElement } = await google.maps.importLibrary('marker');
+    if (version !== renderVersion || state.view !== 'map') return;
     const validPlaces = places.filter(p => coordinates(p));
     const mapNode = document.getElementById('travelMap');
     if (!mapNode) return;
@@ -117,7 +122,7 @@
     markerByPlaceId = new Map();
 
     if (!validPlaces.length) {
-      mapNode.classList.add('map-empty-canvas');
+      mapNode.innerHTML = '<div class="today-map-message">這個篩選範圍尚無可顯示座標，仍可使用下方 Google Maps 連結。</div>';
       return;
     }
 
@@ -128,6 +133,7 @@
         map: mapInstance,
         position,
         title: place.name || '地點',
+        content: new PinElement({background:usedIds.has(place.id)?'#2563eb':'#d97706',borderColor:'#fff',glyphColor:'#fff',glyph:usedIds.has(place.id)?'●':'◇'}).element,
         gmpClickable: true
       });
       marker.addEventListener('gmp-click', () => {
@@ -146,61 +152,90 @@
     }
   }
 
+  function schedule(action) {
+    return window.TRAVEL_PLANNER_INTERACTIONS
+      ? window.TRAVEL_PLANNER_INTERACTIONS.schedule(action) : action();
+  }
+
+  function bindMapControls() {
+    bindFilters();
+    bindMapSetup();
+    document.getElementById('mapDateSelect')?.addEventListener('change', event => {
+      const date = event.target.value;
+      schedule(async () => { mapDate = date; await renderMap(false); });
+    });
+    document.querySelectorAll('[data-map-layer]').forEach(button => {
+      button.onclick = () => {
+        const layer = button.dataset.mapLayer;
+        schedule(async () => { mapLayer = layer; await renderMap(false); });
+      };
+    });
+    document.getElementById('resetMapConfig')?.addEventListener('click', () => {
+      if (!window.confirm('要清除這台裝置的 Google Maps 設定嗎？')) return;
+      schedule(async () => { clearMapSettings(); await renderMap(false); });
+    });
+  }
+
   try {
     renderMap = async function (force = false) {
-      pageTitle.textContent = '地圖';
+      const version = ++renderVersion;
+      pageTitle.textContent = '地圖與地點';
       loading();
-
+      markerByPlaceId = new Map();
+      mapInstance = null;
+      const options = window.TRAVEL_PLANNER_OPTIONS;
+      const [places, itinerary] = await Promise.all([
+        api('places', {}, force),
+        api('itinerary', { group: groupParam() }, force),
+        window.TRAVEL_PLANNER_PLACE_MEMOS ? window.TRAVEL_PLANNER_PLACE_MEMOS.load(force) : Promise.resolve([]),
+        options ? options.load(force) : Promise.resolve([])
+      ]);
+      if (version !== renderVersion || state.view !== 'map') return;
+      const dates = [...new Set(itinerary.map(item => item.date).filter(Boolean))].sort();
+      if (!dates.includes(mapDate)) mapDate = dates.includes(state.date) ? state.date : dates[0] || null;
+      const dayItems = itinerary.filter(item => item.date === mapDate);
+      const usedIds = new Set(dayItems.map(item => item.place_id).filter(Boolean));
+      const resolvedOptions = options ? options.resolve(dayItems, places) : new Map();
+      const nearbyIds = new Set(dayItems.flatMap(item => resolvedOptions.get(item.id) || []).map(row => row.candidate_place.id).filter(Boolean));
+      const visible = places.filter(place => mapLayer === 'all' || (mapLayer === 'nearby' ? nearbyIds.has(place.id) : usedIds.has(place.id)));
+      const order = new Map(dayItems.map((item, index) => [item.place_id, index]));
+      const sorted = visible.slice().sort((a, b) =>
+        (order.get(a.id) ?? Infinity) - (order.get(b.id) ?? Infinity) ||
+        String(a.city || '').localeCompare(String(b.city || ''), 'zh-Hant') ||
+        String(a.name || '').localeCompare(String(b.name || ''), 'zh-Hant'));
+      const coordinateCount = sorted.filter(place => coordinates(place)).length;
       const settings = readMapSettings();
-      if (!settings.apiKey || !settings.mapId) {
-        app.innerHTML = mapSetupCard();
-        bindMapSetup();
-        return;
-      }
-
+      const configured = !!(settings.apiKey && settings.mapId);
+      const labels = {route:'當日主線',nearby:'附近可選',all:'全部地點'};
+      const empty = mapLayer === 'nearby' ? '這一天尚無已整理的附近選項。這不代表周邊沒有景點。' : '這個範圍尚無地點資料。沒有地點連結的行程仍可在今日查看。';
+      app.innerHTML = `<section class="section">${filters()}
+        <label for="mapDateSelect">日期</label><select id="mapDateSelect" class="map-config-input" ${dates.length ? '' : 'disabled'}>${dates.length ? dates.map(date => `<option value="${esc(date)}" ${date === mapDate ? 'selected' : ''}>${esc(formatDateLabel(date))}</option>`).join('') : '<option>尚無行程日期</option>'}</select>
+        <div class="filters" aria-label="地點範圍">${Object.entries(labels).map(([key,label]) => `<button type="button" class="filter-btn ${mapLayer === key ? 'active' : ''}" aria-pressed="${mapLayer === key}" data-map-layer="${key}">${label}</button>`).join('')}</div>
+        <p class="meta">${mapLayer === 'all' ? '全部地點包含本次主線以外的收藏，不代表已排入行程。' : '藍色為主線，橘色為附近可選；選項不會自動加入行程。'}</p>
+      </section>
+      <section class="section map-section">
+        <div class="map-heading-row"><h2>${labels[mapLayer]}</h2><span class="badge">${coordinateCount} / ${sorted.length} 有座標</span></div>
+        <div id="travelMap" class="${configured ? 'travel-map' : 'card'}" aria-label="Google Maps 旅程地圖"><div class="today-map-message">${configured ? '正在載入地圖…' : '內嵌地圖尚未設定。下方地點與 Google Maps 導航仍可使用。'}</div></div>
+        ${mapSetupCard()}
+        ${configured ? '<button id="resetMapConfig" class="map-settings-button" type="button">重設地圖設定</button>' : ''}
+      </section>
+      <section class="section"><div class="map-heading-row"><h2>地點清單</h2><span class="badge">${sorted.length}</span></div><div class="stack">${sorted.length ? sorted.map(place => placeCard(place, usedIds, nearbyIds)).join('') : `<div class="card empty">${empty}</div>`}</div></section>`;
+      bindMapControls();
+      if (!configured) return;
       try {
-        const [places, itinerary] = await Promise.all([
-          api('places', {}, force),
-          api('itinerary', { group: groupParam() }, force),
-          window.TRAVEL_PLANNER_PLACE_MEMOS ? window.TRAVEL_PLANNER_PLACE_MEMOS.load(force) : Promise.resolve([])
-        ]);
-        const usedIds = new Set(itinerary.map(i => i.place_id).filter(Boolean));
-        const sorted = [...places].sort((a, b) =>
-          (usedIds.has(b.id) ? 1 : 0) - (usedIds.has(a.id) ? 1 : 0) ||
-          String(a.city || '').localeCompare(String(b.city || ''), 'zh-Hant') ||
-          String(a.name || '').localeCompare(String(b.name || ''), 'zh-Hant')
-        );
-        const coordinateCount = sorted.filter(p => coordinates(p)).length;
-        const placesById = new Map(sorted.map(p => [p.id, p]));
-
-        app.innerHTML = `<section class="section">${filters()}</section>
-          <section class="section map-section">
-            <div class="map-heading-row"><h2>旅程地圖</h2><span class="badge">${coordinateCount} / ${sorted.length} 有座標</span></div>
-            <div id="travelMap" class="travel-map" aria-label="Google Maps 旅程地圖"></div>
-            <div class="map-toolbar"><span class="meta">點地點卡片可快速定位</span><button id="resetMapConfig" class="map-settings-button" type="button">重設地圖設定</button></div>
-          </section>
-          <section class="section"><div class="map-heading-row"><h2>旅程地點</h2><span class="badge">${sorted.length}</span></div><div class="stack">${sorted.length ? sorted.map(p => placeCard(p, usedIds)).join('') : '<div class="card empty">目前沒有地點資料。</div>'}</div></section>`;
-
-        bindFilters();
-        document.getElementById('resetMapConfig')?.addEventListener('click', () => {
-          if (!window.confirm('要清除這台裝置的 Google Maps 設定嗎？')) return;
-          clearMapSettings();
-          renderMap(false);
-        });
-
         await loadGoogleMaps(settings.apiKey);
-        await drawMap(sorted, usedIds, settings.mapId);
-        bindPlaceFocus(placesById);
+        if (version !== renderVersion || state.view !== 'map') return;
+        await drawMap(sorted, usedIds, settings.mapId, version);
+        if (version !== renderVersion || state.view !== 'map') return;
+        bindPlaceFocus(new Map(sorted.map(place => [place.id, place])));
       } catch (error) {
-        console.error('P7.3 map failed', error);
-        app.innerHTML = `<div class="card error">地圖載入失敗：${esc(error?.message || '未知錯誤')}</div><div class="card"><button id="resetMapAfterError" class="retry-button" type="button">重新設定 Google Maps</button></div>`;
-        document.getElementById('resetMapAfterError')?.addEventListener('click', () => {
-          clearMapSettings();
-          renderMap(false);
-        });
+        if (version !== renderVersion || state.view !== 'map') return;
+        console.warn('Map unavailable; keeping place list.', error);
+        const node = document.getElementById('travelMap');
+        if (node) node.innerHTML = `<div class="today-map-message">內嵌地圖載入失敗：${esc(error?.message || '未知錯誤')}。地點清單與外部導航不受影響。</div>`;
       }
     };
   } catch (error) {
-    console.error('P7.3 patch failed', error);
+    console.error('Map renderer failed', error);
   }
 })();
