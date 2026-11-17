@@ -58,3 +58,20 @@ test('clear invalidates stale in-flight results and does not overwrite newer dat
   a.clear();window.TRAVEL_PLANNER_OPTIONS_DATA=[{...base,id:'IO002'}];await a.load();
   finish([base]);assert.equal((await old).length,0);assert.equal(a.forItem('I048')[0].id,'IO002');
 });
+test('production bundle is scoped to verified parent and actual primary/candidate place identities',async()=>{
+ const window={};vm.runInNewContext(fs.readFileSync(path.join(__dirname,'../nearby-options-data.js'),'utf8'),{window});
+ const a=app(window);await a.load();
+ const item={id:'I069',date:'2026-12-22',group:'ours',place_id:'P070'};
+ const places=[{id:'P070',name:'青山まんぷく'},{id:'P071',name:'USHIGORO 表參道'}];
+ assert.equal(a.resolve([item],places).get('I069').length,1);
+ for(const patch of [{date:'2026-12-23'},{group:'friends'},{place_id:'P001'}])assert.equal(a.resolve([{...item,...patch}],places).size,0);
+ assert.equal(a.resolve([item],[places[0],{...places[1],name:'Different branch'}]).size,0);
+ assert.equal(a.resolve([item],[places[1]]).size,0);
+ assert.equal(a.resolve([],places).size,0);
+});
+test('explicit API selection takes priority over bundled fallback, including API failure',async()=>{
+ const window={TRAVEL_PLANNER_OPTIONS_CONFIG:{optionsResource:'itinerary_options'}};
+ vm.runInNewContext(fs.readFileSync(path.join(__dirname,'../nearby-options-data.js'),'utf8'),{window});
+ assert.equal((await app(window,async()=>[]).load()).length,0);
+ assert.equal((await app(window,async()=>{throw Error('offline')}).load()).length,0);
+});

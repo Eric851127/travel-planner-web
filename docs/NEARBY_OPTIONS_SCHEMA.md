@@ -1,6 +1,6 @@
 # Nearby options: backward-compatible data contract
 
-This feature is read-only and **off by default**. It does not mutate, create, or migrate any Google Sheet, booking, or Apps Script deployment. Existing Itinerary, Places, and PlaceMemos data remains valid.
+This feature is read-only. The initial approved release explicitly loads one fingerprint-checked production bundle; the API source stays **off by default**. It does not mutate, create, or migrate any Google Sheet, booking, or Apps Script deployment. Existing Itinerary, Places, and PlaceMemos data remains valid.
 
 ## Two different concepts
 
@@ -35,7 +35,8 @@ Load `nearby-options.js` before any renderer that uses it, while preserving rela
 
 1. `window.TRAVEL_PLANNER_OPTIONS_DATA` array, when explicitly supplied, is a local/offline preview fixture. It takes precedence; do not silently install demo data in production.
 2. Otherwise, `window.TRAVEL_PLANNER_OPTIONS_CONFIG = { optionsResource: 'itinerary_options' }` opts into the already-deployed read-only API resource.
-3. Without either, `load()` returns `[]` without a network call. No inference from API errors or other configuration enables the new resource.
+3. Otherwise an explicitly loaded `TRAVEL_PLANNER_OPTIONS_BUNDLE` supplies reviewed relations only while live parent date/group/place and primary/candidate names match its fingerprint.
+4. Without any source, `load()` returns `[]` without a network call. No inference from API errors or other configuration enables the new resource.
 
 `window.TRAVEL_PLANNER_OPTIONS` exposes:
 
@@ -49,3 +50,5 @@ Renderers must escape all text, use existing safe Maps URL helpers for links, an
 ## Verification
 
 `node --test tests/nearby-options.test.cjs` covers disabled/no-network defaults, invalid/inactive rows, duplicate IDs, FK and filtered-parent isolation, immutable input behavior, explicit resource/cache/refresh behavior, unsupported-resource failure, and stale asynchronous result invalidation. UI integration and production deployment are separate verification stages.
+
+Production rollout path and validation: `NEARBY_OPTIONS_RELEASE.md`. This release uses the single reviewed bundle and does not deploy the optional API or import the migration CSV.

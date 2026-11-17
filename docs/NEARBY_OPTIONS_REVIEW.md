@@ -1,3 +1,5 @@
+> Superseded release status and actual browser verification: [NEARBY_OPTIONS_RELEASE.md](NEARBY_OPTIONS_RELEASE.md). The limitations below describe the earlier review stage.
+
 # 主線＋附近選項：獨立審閱版本
 
 ## 狀態與界線

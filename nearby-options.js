@@ -1,9 +1,9 @@
-/* Optional itinerary-scoped nearby choices. Read-only and disabled by default. */
+/* Optional itinerary-scoped nearby choices. Read-only; API opt-in or explicitly loaded, fingerprint-checked bundle. */
 (function () {
   'use strict';
   const TYPES = new Set(['nearby', 'alternative']);
   const PRIORITIES = { high: 0, normal: 1, low: 2 };
-  let cache = null, pending = null, generation = 0;
+  let cache = null, pending = null, generation = 0, bundleGuard = null;
   const text = value => typeof value === 'string' ? value.trim() : '';
   const active = value => value === true || value === 1 || /^(true|1)$/i.test(String(value).trim());
   function normalize(rows) {
@@ -35,26 +35,29 @@
     if (!force && pending) return pending;
     const token = ++generation;
     const request = (async () => {
-      let rows = [];
+      let rows = [], guard = null;
       try {
         if (Array.isArray(window.TRAVEL_PLANNER_OPTIONS_DATA)) {
           rows = window.TRAVEL_PLANNER_OPTIONS_DATA;
         } else if (window.TRAVEL_PLANNER_OPTIONS_CONFIG?.optionsResource === 'itinerary_options'
           && typeof api === 'function') {
           rows = await api('itinerary_options', {}, force);
+        } else if (!window.TRAVEL_PLANNER_OPTIONS_CONFIG?.optionsResource && window.TRAVEL_PLANNER_OPTIONS_BUNDLE) {
+          const bundle=window.TRAVEL_PLANNER_OPTIONS_BUNDLE;
+          if(bundle.parents && bundle.places && Array.isArray(bundle.rows)){rows=bundle.rows;guard={parents:bundle.parents,places:bundle.places};}
         }
       } catch (error) {
         console.warn('Nearby choices unavailable; main itinerary is unchanged.', error);
       }
       const normalized = normalize(rows);
-      if (token === generation) cache = normalized;
+      if (token === generation) {cache = normalized;bundleGuard=guard;}
       return token === generation ? normalized.slice() : [];
     })();
     pending = request;
     try { return await request; }
     finally { if (pending === request) pending = null; }
   }
-  function clear() { generation++; cache = null; pending = null; }
+  function clear() { generation++; cache = null; pending = null; bundleGuard = null; }
   function forItem(id) { return (cache || []).filter(row => row.itinerary_id === id); }
   function resolve(items, places) {
     const itemMap = new Map((Array.isArray(items) ? items : []).filter(Boolean).map(item => [item.id, item]));
@@ -63,6 +66,11 @@
     for (const row of cache || []) {
       const parent = itemMap.get(row.itinerary_id), candidate = placeMap.get(row.candidate_place_id);
       if (!parent || !candidate) continue;
+      if(bundleGuard){
+        const expected=bundleGuard.parents[parent.id], primary=placeMap.get(parent.place_id);
+        if(!expected || expected.date!==parent.date || expected.group!==parent.group || expected.place_id!==parent.place_id
+          || !primary || bundleGuard.places[parent.place_id]!==primary.name || bundleGuard.places[candidate.id]!==candidate.name)continue;
+      }
       const resolved = Object.freeze({ ...row, parent_item: parent, candidate_place: candidate,
         date: parent.date, group: parent.group });
       if (!result.has(parent.id)) result.set(parent.id, []);
