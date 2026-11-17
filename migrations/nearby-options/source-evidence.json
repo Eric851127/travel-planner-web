@@ -1,0 +1,80 @@
+{
+  "status": "offline_proposal_not_imported",
+  "snapshot_date": "2026-11-16",
+  "snapshot_sha256": "0241d1df93d2ef9b64c71581a537fde8a4068c0bfe3cbddba1f83043d36fed18",
+  "source": "Travel Planner Schema v1: after-maps-notes snapshot",
+  "full_places_scan_count": 71,
+  "itinerary": [
+    {
+      "sheet_row": 33,
+      "id": "I034",
+      "date": "2026-12-28",
+      "group": "all",
+      "title": "前往札幌",
+      "place_id": "",
+      "certainty": "confirmed"
+    },
+    {
+      "sheet_row": 39,
+      "id": "I040",
+      "date": "2026-12-30",
+      "group": "all",
+      "title": "備選：狸小路",
+      "place_id": "P035",
+      "certainty": "optional"
+    },
+    {
+      "sheet_row": 47,
+      "id": "I048",
+      "date": "2026-12-22",
+      "group": "ours",
+      "title": "表參道／青山自由逛・冬季燈飾",
+      "place_id": "P064",
+      "certainty": "tentative"
+    },
+    {
+      "sheet_row": 69,
+      "id": "I069",
+      "date": "2026-12-22",
+      "group": "ours",
+      "title": "表參道燒肉晚餐（候選，未訂）",
+      "place_id": "P070",
+      "certainty": "tentative"
+    }
+  ],
+  "places": [
+    {
+      "sheet_row": 42,
+      "id": "P047",
+      "name": "札幌螃蟹家本店",
+      "city": "札幌",
+      "category": "restaurant"
+    },
+    {
+      "sheet_row": 65,
+      "id": "P064",
+      "name": "原宿／表參道・Cat Street",
+      "city": "東京",
+      "category": "other"
+    },
+    {
+      "sheet_row": 71,
+      "id": "P070",
+      "name": "青山まんぷく",
+      "city": "東京",
+      "category": "restaurant"
+    },
+    {
+      "sheet_row": 72,
+      "id": "P071",
+      "name": "USHIGORO 表參道",
+      "city": "東京",
+      "category": "restaurant"
+    }
+  ],
+  "checks": {
+    "duplicate_itinerary_ids": false,
+    "duplicate_place_ids": false
+  },
+  "proposed_option_ids": "IO001 is a proposed new ID, not allocated in the live Sheet; recheck collisions before import."
+}

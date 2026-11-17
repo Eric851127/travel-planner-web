@@ -9,7 +9,7 @@ This feature is read-only and **off by default**. It does not mutate, create, or
 
 No code parses legacy free-text `notes` to infer structured options. A recommendation written in a note is not silently promoted to a selected destination.
 
-## Proposed future resource
+## Optional resource prepared in this branch (not deployed)
 
 `itinerary_options` (proposed Sheet name `ItineraryOptions`):
 
@@ -27,7 +27,7 @@ No code parses legacy free-text `notes` to infer structured options. A recommend
 | active | Explicit TRUE/1 enables; false/missing hides |
 | sort_order | Integer 0–9999; default 10 |
 
-Production rollout requires separately authorized Sheet creation, exact FK/enum validation, public API allowlisting, and verified backend deployment **before** enabling the resource. Public fields must exclude private booking/account data. Invalid rows are omitted and missing foreign keys never create phantom places. Duplicate IDs keep the first valid row deterministically.
+The public API source in this branch includes the optional resource mapping, strict field allowlist, FK/enum checks, and additive bootstrap field. Missing or malformed optional sheets return an empty list. Production rollout still requires separately authorized Sheet creation/import and verified backend deployment **before** enabling the resource. The protected Admin UI/backend does not yet provide CRUD for this table; do not route writes through the public API. Public fields must exclude private booking/account data. Invalid rows are omitted and missing foreign keys never create phantom places. Duplicate IDs keep the first valid row deterministically.
 
 ## Source and runtime API
 

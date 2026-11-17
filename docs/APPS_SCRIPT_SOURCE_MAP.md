@@ -130,3 +130,8 @@ Admin GitHub Pages
 ```
 
 Never expose Traveler public reads through the protected Admin endpoint, and never move Admin auth/write behavior into the Traveler public API.
+
+
+## Undeployed nearby-options review branch
+
+This branch prepares an optional `ItineraryOptions` resource in the Traveler public API only. It has **not** been deployed and must not be assumed to exist in the live endpoint. Missing optional sheets return an empty list; legacy public field allowlists remain unchanged. See `NEARBY_OPTIONS_MIGRATION.md` for offline data and rollout gates. The protected Admin backend is intentionally unchanged and has no options CRUD yet.

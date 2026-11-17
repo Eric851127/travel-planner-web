@@ -80,8 +80,8 @@ test('repeated navigation, refresh and back to Today retain working controls',as
 test('existing mobility and hotel data remain visible while optional choices stay distinct',async()=>{
  const x=setup();Object.assign(x.w.TRAVEL_PLANNER_PREVIEW_DATA,{
  flights:[{id:'F001',date:'2026-12-22',group:'ours',flight_no:'TEST123',departure_time:'07:00',departure_airport:'A',arrival_airport:'B'}],
- transport:[{id:'T001',date:'2026-12-22',group:'all',type:'train',from_place_id:'P010',to_place_id:'P070',service_no:'TEST45'}],
- hotels:[{id:'H001',group:'ours',check_in:'2026-12-22',check_out:'2026-12-23',hotel_name:'測試住宿',place_id:'P010'}]});
+ transport:[{id:'T001',date:'2026-12-22',group:'all',type:'train',from_place_id:'P064',to_place_id:'P070',service_no:'TEST45'}],
+ hotels:[{id:'H001',group:'ours',check_in:'2026-12-22',check_out:'2026-12-23',hotel_name:'測試住宿',place_id:'P064'}]});
  await x.run('renderCurrent()');assert.match(x.app.textContent,/TEST123/);assert.match(x.app.textContent,/TEST45/);assert.match(x.app.textContent,/測試住宿/);
  x.dom.window.close();
 });
@@ -111,7 +111,7 @@ test('pending Maps importLibrary never blocks leaving map and cannot overwrite t
  x.dom.window.close();
 });
 test('separate alternative groups under one itinerary have distinct escaped labels',async()=>{
- const x=setup();x.w.TRAVEL_PLANNER_OPTIONS_DATA.push({...x.w.TRAVEL_PLANNER_OPTIONS_DATA[1],id:'IO005',candidate_place_id:'P064',choice_set:'coffee <group>'});
+ const x=setup();x.w.TRAVEL_PLANNER_OPTIONS_DATA.push({...x.w.TRAVEL_PLANNER_OPTIONS_DATA[1],id:'IO005',candidate_place_id:'P902',choice_set:'coffee <group>'});
  await x.run('renderCurrent()');
  assert.match(x.app.textContent,/選項組：dinner-1222/);assert.match(x.app.textContent,/選項組：coffee <group>/);assert.equal(x.app.querySelectorAll('group').length,0);
  x.dom.window.close();
