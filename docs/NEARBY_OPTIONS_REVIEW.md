@@ -28,12 +28,12 @@ npm run preview
 - 全旅程按日收合，保留 description、certainty、PlaceMemos 及原預訂 badge。
 - 附近資料以 Itinerary 外鍵繼承日期及 group，不增加主線編號或預訂。
 - 地圖按日及範圍過濾，預設當日主線；缺 Key、缺座標或 Maps 失敗仍保留清單與 Google Maps 連結。
-- 防止晚到地圖請求覆寫新日期、群組或頁面；共用 Maps loader 增加 15 秒逾時。
+- 防止晚到地圖請求覆寫新日期、群組或頁面；共用 Maps loader 與 importLibrary 各有 15 秒逾時；地圖繪製在背景執行，不占用日期／群組／導覽共用互動佇列。
 - 公開 API 欄位及 Admin 身分驗證保持不變。新版資料契約見 `NEARBY_OPTIONS_SCHEMA.md`。
 
 ## 驗證結果
 
-- 24 項 Node/VM/jsdom 測試通過，包括資料隔離、無來源、無效資料、缺地點、日期／群組、原航班交通住宿、預訂 badge、導覽／重整、HTML/URL 安全、地圖失敗與非同步競態。
+- 28 項 Node/VM/jsdom 測試通過，包括資料隔離、無來源、無效資料、缺地點、日期／群組、原航班交通住宿、預訂 badge、導覽／重整、HTML/URL 安全、地圖失敗與非同步競態、永不回應的地圖載入下仍可切換日期／群組／離頁、不同 choice_set 標記。
 - 全部頂層與 preview JavaScript 語法檢查通過。
 - `git diff --check` 通過。
 

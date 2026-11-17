@@ -103,9 +103,9 @@
     node.innerHTML = '<div class="today-map-message">正在載入地圖…</div>';
     await loadGoogleMaps(settings.apiKey);
     if (!isCurrent()) return false;
-    await google.maps.importLibrary('maps');
+    await window.TRAVEL_PLANNER_MAPS.importLibrary('maps');
     if (!isCurrent()) return false;
-    const { AdvancedMarkerElement, PinElement } = await google.maps.importLibrary('marker');
+    const { AdvancedMarkerElement, PinElement } = await window.TRAVEL_PLANNER_MAPS.importLibrary('marker');
     if (!isCurrent()) return false;
     const markerSpecs = [], itineraryPlaceIds = new Set();
     stops.forEach(stop => { if (!stop.place) return; const position = coord(stop.place);if (!position || itineraryPlaceIds.has(stop.place.id)) return;itineraryPlaceIds.add(stop.place.id);markerSpecs.push({place:stop.place,position,glyph:String(stop.number),label:`今日行程 ${stop.number}`}); });

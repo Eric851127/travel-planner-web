@@ -85,3 +85,34 @@ test('existing mobility and hotel data remain visible while optional choices sta
  await x.run('renderCurrent()');assert.match(x.app.textContent,/TEST123/);assert.match(x.app.textContent,/TEST45/);assert.match(x.app.textContent,/測試住宿/);
  x.dom.window.close();
 });
+test('pending map SDK never blocks queued date, group, or navigation interactions',async()=>{
+ const x=setup();let release;
+ x.w.TRAVEL_PLANNER_MAP_CONFIG={apiKey:'test',mapId:'test'};
+ x.w.TRAVEL_PLANNER_MAPS={...x.w.TRAVEL_PLANNER_MAPS,load:()=>new Promise(r=>{release=r;})};
+ await x.run("state.view='map';TRAVEL_PLANNER_INTERACTIONS.schedule(()=>renderCurrent())");
+ const date=x.app.querySelector('#mapDateSelect');date.value='2026-12-28';date.dispatchEvent(new x.w.Event('change'));await flush();
+ assert.match(x.app.textContent,/札幌市中心/);
+ x.app.querySelector('[data-group="friends"]').click();await flush();
+ assert.equal(x.run('state.group'),'friends');
+ assert.ok(x.app.querySelector('[data-group="friends"]').classList.contains('active'));
+ x.w.document.querySelector('[data-view="trip"]').click();await flush();
+ assert.ok(x.app.querySelector('.trip-day'));
+ release();await flush();assert.ok(x.app.querySelector('.trip-day'));
+ x.dom.window.close();
+});
+test('pending Maps importLibrary never blocks leaving map and cannot overwrite the destination',async()=>{
+ const x=setup();let release;
+ x.w.TRAVEL_PLANNER_MAP_CONFIG={apiKey:'test',mapId:'test'};
+ x.w.TRAVEL_PLANNER_MAPS={...x.w.TRAVEL_PLANNER_MAPS,load:async()=>{},importLibrary:()=>new Promise(r=>{release=r;})};
+ await x.run("state.view='map';TRAVEL_PLANNER_INTERACTIONS.schedule(()=>renderCurrent())");await flush();
+ x.w.document.querySelector('[data-view="today"]').click();await flush();
+ assert.ok(x.app.querySelector('.today-route-card'));
+ release({});await flush();assert.ok(x.app.querySelector('.today-route-card'));
+ x.dom.window.close();
+});
+test('separate alternative groups under one itinerary have distinct escaped labels',async()=>{
+ const x=setup();x.w.TRAVEL_PLANNER_OPTIONS_DATA.push({...x.w.TRAVEL_PLANNER_OPTIONS_DATA[1],id:'IO005',candidate_place_id:'P064',choice_set:'coffee <group>'});
+ await x.run('renderCurrent()');
+ assert.match(x.app.textContent,/選項組：dinner-1222/);assert.match(x.app.textContent,/選項組：coffee <group>/);assert.equal(x.app.querySelectorAll('group').length,0);
+ x.dom.window.close();
+});

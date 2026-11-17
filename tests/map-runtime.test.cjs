@@ -63,7 +63,7 @@ test('date and group switches filter main-line and nearby relations', async () =
   h.buttons[1].onclick();await tick();assert.match(h.app.innerHTML,/尚無已整理的附近選項/);assert.doesNotMatch(h.app.innerHTML,/附近咖啡/);
 });
 test('Maps loader rejection leaves list and external navigation intact', async () => {
-  const h=mapHarness({configured:true,load:async()=>{throw Error('test network failure');}});await h.context.renderMap();
+  const h=mapHarness({configured:true,load:async()=>{throw Error('test network failure');}});await h.context.renderMap();await tick();
   assert.match(h.app.innerHTML,/東京主線/);assert.match(h.app.innerHTML,/Google Maps ↗/);assert.match(h.nodes.travelMap.innerHTML,/外部導航不受影響/);
 });
 test('empty itinerary and places render a usable empty state', async () => {
@@ -75,6 +75,7 @@ function todayHarness() {
   const nodes={todayTravelMap:initialNode,todayMapDetails:{open:true}};
   const state={date:'2026-12-21',group:'ours',view:'today'};
   const context={Symbol,Set,Map,console:quiet,state,document:{getElementById:id=>nodes[id]||null},mapSettings:()=>({apiKey:'test',mapId:'test'}),loadGoogleMaps:()=>new Promise(resolve=>{release=resolve;}),google:{maps:{importLibrary:async()=>({}),Map:function(){created++;}}},coord:()=>null};
+  context.window={TRAVEL_PLANNER_MAPS:{importLibrary:context.google.maps.importLibrary}};
   vm.createContext(context);vm.runInContext(drawSource,context);
   return {context,nodes,state,initialNode,release:()=>release(),created:()=>created};
 }

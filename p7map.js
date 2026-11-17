@@ -102,8 +102,9 @@
   }
 
   async function drawMap(places, usedIds, mapId, version) {
-    await google.maps.importLibrary('maps');
-    const { AdvancedMarkerElement, PinElement } = await google.maps.importLibrary('marker');
+    await window.TRAVEL_PLANNER_MAPS.importLibrary('maps');
+    if (version !== renderVersion || state.view !== 'map') return;
+    const { AdvancedMarkerElement, PinElement } = await window.TRAVEL_PLANNER_MAPS.importLibrary('marker');
     if (version !== renderVersion || state.view !== 'map') return;
     const validPlaces = places.filter(p => coordinates(p));
     const mapNode = document.getElementById('travelMap');
@@ -222,18 +223,24 @@
       <section class="section"><div class="map-heading-row"><h2>地點清單</h2><span class="badge">${sorted.length}</span></div><div class="stack">${sorted.length ? sorted.map(place => placeCard(place, usedIds, nearbyIds)).join('') : `<div class="card empty">${empty}</div>`}</div></section>`;
       bindMapControls();
       if (!configured) return;
+      // Rendering the optional map must never occupy the navigation queue.
+      // Keep the original node as well as the version to reject leave/re-enter races.
+      const mapNode = document.getElementById('travelMap');
+      const current = () => version === renderVersion && state.view === 'map' && document.getElementById('travelMap') === mapNode;
+      void (async () => {
       try {
         await loadGoogleMaps(settings.apiKey);
-        if (version !== renderVersion || state.view !== 'map') return;
+        if (!current()) return;
         await drawMap(sorted, usedIds, settings.mapId, version);
-        if (version !== renderVersion || state.view !== 'map') return;
+        if (!current()) return;
         bindPlaceFocus(new Map(sorted.map(place => [place.id, place])));
       } catch (error) {
-        if (version !== renderVersion || state.view !== 'map') return;
+        if (!current()) return;
         console.warn('Map unavailable; keeping place list.', error);
         const node = document.getElementById('travelMap');
         if (node) node.innerHTML = `<div class="today-map-message">內嵌地圖載入失敗：${esc(error?.message || '未知錯誤')}。地點清單與外部導航不受影響。</div>`;
       }
+      })();
     };
   } catch (error) {
     console.error('Map renderer failed', error);

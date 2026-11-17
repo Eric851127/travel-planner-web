@@ -69,6 +69,17 @@
     return mapsPromise;
   }
 
+  // Library downloads may hang after the initial SDK script has loaded.
+  function importLibrary(name) {
+    return new Promise((resolve, reject) => {
+      const timer = setTimeout(() => reject(new Error('Google Maps 模組載入逾時：' + name)), 15000);
+      Promise.resolve().then(() => window.google.maps.importLibrary(name)).then(
+        value => { clearTimeout(timer); resolve(value); },
+        error => { clearTimeout(timer); reject(error); }
+      );
+    });
+  }
+
   function numberOrNull(value) {
     if (value === '' || value === null || value === undefined) return null;
     const number = Number(value);
@@ -114,6 +125,7 @@
     saveSettings,
     clearSettings,
     load,
+    importLibrary,
     coordinates,
     placeSearchUrl,
     directionsUrl
