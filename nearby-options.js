@@ -44,7 +44,7 @@
           rows = await api('itinerary_options', {}, force);
         } else if (!window.TRAVEL_PLANNER_OPTIONS_CONFIG?.optionsResource && window.TRAVEL_PLANNER_OPTIONS_BUNDLE) {
           const bundle=window.TRAVEL_PLANNER_OPTIONS_BUNDLE;
-          if(bundle.parents && bundle.places && Array.isArray(bundle.rows)){rows=bundle.rows;guard={parents:bundle.parents,places:bundle.places};}
+          if(bundle.parents && bundle.places && Array.isArray(bundle.rows)){rows=bundle.rows;guard={parents:bundle.parents,places:bundle.places,audiences:bundle.audiences||{}};}
         }
       } catch (error) {
         console.warn('Nearby choices unavailable; main itinerary is unchanged.', error);
@@ -59,7 +59,7 @@
   }
   function clear() { generation++; cache = null; pending = null; bundleGuard = null; }
   function forItem(id) { return (cache || []).filter(row => row.itinerary_id === id); }
-  function resolve(items, places) {
+  function resolve(items, places, selectedGroup) {
     const itemMap = new Map((Array.isArray(items) ? items : []).filter(Boolean).map(item => [item.id, item]));
     const placeMap = new Map((Array.isArray(places) ? places : []).filter(Boolean).map(place => [place.id, place]));
     const result = new Map();
@@ -67,6 +67,8 @@
       const parent = itemMap.get(row.itinerary_id), candidate = placeMap.get(row.candidate_place_id);
       if (!parent || !candidate) continue;
       if(bundleGuard){
+        const audience=bundleGuard.audiences[row.id];
+        if(audience !== undefined && (!Array.isArray(audience) || !audience.includes(selectedGroup)))continue;
         const expected=bundleGuard.parents[parent.id], primary=placeMap.get(parent.place_id);
         if(!expected || expected.date!==parent.date || expected.group!==parent.group || expected.place_id!==parent.place_id
           || !primary || bundleGuard.places[parent.place_id]!==primary.name || bundleGuard.places[candidate.id]!==candidate.name)continue;

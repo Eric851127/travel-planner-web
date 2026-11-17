@@ -196,7 +196,7 @@
       if (!dates.includes(mapDate)) mapDate = dates.includes(state.date) ? state.date : dates[0] || null;
       const dayItems = itinerary.filter(item => item.date === mapDate);
       const usedIds = new Set(dayItems.map(item => item.place_id).filter(Boolean));
-      const resolvedOptions = options ? options.resolve(dayItems, places) : new Map();
+      const resolvedOptions = options ? options.resolve(dayItems, places,state.group) : new Map();
       const nearbyIds = new Set(dayItems.flatMap(item => resolvedOptions.get(item.id) || []).map(row => row.candidate_place.id).filter(Boolean));
       const visible = places.filter(place => mapLayer === 'all' || (mapLayer === 'nearby' ? nearbyIds.has(place.id) : usedIds.has(place.id)));
       const order = new Map(dayItems.map((item, index) => [item.place_id, index]));
