@@ -52,3 +52,5 @@ Renderers must escape all text, use existing safe Maps URL helpers for links, an
 `node --test tests/nearby-options.test.cjs` covers disabled/no-network defaults, invalid/inactive rows, duplicate IDs, FK and filtered-parent isolation, immutable input behavior, explicit resource/cache/refresh behavior, unsupported-resource failure, and stale asynchronous result invalidation. UI integration and production deployment are separate verification stages.
 
 Production rollout path and validation: `NEARBY_OPTIONS_RELEASE.md`. This release uses the single reviewed bundle and does not deploy the optional API or import the migration CSV.
+
+Production bundles may additionally specify `audiences: {IOxxx:['ours']}`. This narrows display only, never changes the parent group. Consumers pass the current selected group as the third `resolve` argument; restricted options fail closed without an exact match. API/fixture schemas are unchanged. Maps all-places inventory remains an unfiltered catalogue, not an itinerary recommendation.

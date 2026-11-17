@@ -78,7 +78,7 @@
         window.TRAVEL_PLANNER_OPTIONS.load(force)
       ]);
       const reservationById=new Map(reservations.map(r=>[r.id,r])),placeById=new Map(places.map(p=>[p.id,p])),transportById=new Map(transports.map(t=>[t.id,t]));
-      const options=window.TRAVEL_PLANNER_OPTIONS.resolve(items,places);
+      const options=window.TRAVEL_PLANNER_OPTIONS.resolve(items,places,state.group);
       const grouped=items.reduce((a,i)=>((a[i.date]??=[]).push(i),a),{});
       const dates=new Set([...Object.keys(grouped),...flights.map(f=>f.date).filter(Boolean),...transports.map(t=>t.date).filter(Boolean)]);
       const sortedDates=Array.from(dates).sort();

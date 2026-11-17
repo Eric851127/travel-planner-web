@@ -116,3 +116,19 @@ test('separate alternative groups under one itinerary have distinct escaped labe
  assert.match(x.app.textContent,/選項組：dinner-1222/);assert.match(x.app.textContent,/選項組：coffee <group>/);assert.equal(x.app.querySelectorAll('group').length,0);
  x.dom.window.close();
 });
+test('shared-parent bundle choices remain ours-only in Today Trip and Map',async()=>{
+ const x=setup();delete x.w.TRAVEL_PLANNER_OPTIONS_DATA;
+ const parent={id:'I040',date:'2026-12-30',group:'all',place_id:'P035',title:'Shared shopping',city:'Sapporo'};
+ const primary={id:'P035',name:'Shopping area'},candidate={id:'P073',name:'Scoped dessert'};
+ x.w.TRAVEL_PLANNER_PREVIEW_DATA.itinerary=[parent];x.w.TRAVEL_PLANNER_PREVIEW_DATA.places=[primary,candidate];
+ x.w.TRAVEL_PLANNER_OPTIONS_BUNDLE={parents:{I040:{date:parent.date,group:'all',place_id:'P035'}},places:{P035:primary.name,P073:candidate.name},audiences:{IO003:['ours']},rows:[{id:'IO003',itinerary_id:'I040',candidate_place_id:'P073',relation_type:'nearby',active:true}]};
+ for(const view of ['today','trip','map']){
+  await x.run(`state.date='2026-12-30';state.view='${view}';state.group='ours';renderCurrent()`);
+  if(view==='map'){x.app.querySelector('[data-map-layer="nearby"]').click();await flush();}
+  assert.match(x.app.textContent,/Scoped dessert/,view+' ours');
+  await x.run(`state.group='friends';renderCurrent()`);
+  assert.doesNotMatch(x.app.textContent,/Scoped dessert/,view+' friends');
+  assert.match(x.app.textContent,view==='map'?/尚無已整理的附近選項/:/Shared shopping/);
+ }
+ x.dom.window.close();
+});

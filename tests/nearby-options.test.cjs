@@ -75,3 +75,23 @@ test('explicit API selection takes priority over bundled fallback, including API
  assert.equal((await app(window,async()=>[]).load()).length,0);
  assert.equal((await app(window,async()=>{throw Error('offline')}).load()).length,0);
 });
+test('bundle audience narrows shared parents and fails closed without current group',async()=>{
+ const bundle={parents:{I048:{date:'2026-12-22',group:'all',place_id:'P064'}},places:{P064:'Area',P072:'Cafe'},audiences:{IO001:['ours']},rows:[base]};
+ const a=app({TRAVEL_PLANNER_OPTIONS_BUNDLE:bundle});await a.load();
+ const items=[{id:'I048',date:'2026-12-22',group:'all',place_id:'P064'}],places=[{id:'P064',name:'Area'},{id:'P072',name:'Cafe'}];
+ assert.equal(a.resolve(items,places,'ours').size,1);
+ for(const group of ['friends','all',undefined,'ours,all'])assert.equal(a.resolve(items,places,group).size,0);
+ assert.equal(items[0].group,'all');
+});
+test('four production relations match verified real anchors with no cross-date or group duplicates',async()=>{
+ const snapshot=JSON.parse(fs.readFileSync(path.join(__dirname,'verified-nearby-anchors.json'),'utf8'));
+ const window={};vm.runInNewContext(fs.readFileSync(path.join(__dirname,'../nearby-options-data.js'),'utf8'),{window});
+ const a=app(window);assert.equal((await a.load()).length,4);
+ const ours=[...a.resolve(snapshot.itinerary,snapshot.places,'ours').values()].flat();
+ assert.equal(ours.length,4);assert.equal(new Set(ours.map(r=>r.candidate_place_id)).size,4);
+ assert.equal(ours.filter(r=>r.date==='2026-12-30').length,2);
+ assert.equal(ours.filter(r=>r.date==='2026-12-28').length,0);
+ const shared=snapshot.itinerary.filter(r=>r.group==='all');
+ assert.equal(a.resolve(shared,snapshot.places,'friends').size,0);
+ assert.equal(a.resolve(snapshot.itinerary,snapshot.places.filter(p=>p.id!=='P073'),'ours').get('I040').length,1);
+});

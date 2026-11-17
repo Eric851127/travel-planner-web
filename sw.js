@@ -1,4 +1,4 @@
-const CACHE_NAME = 'travel-planner-nearby-20261117-3';
+const CACHE_NAME = 'travel-planner-nearby-20261117-4';
 const APP_SHELL = [
   './',
   './index.html',

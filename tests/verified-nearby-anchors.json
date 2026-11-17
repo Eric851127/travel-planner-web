@@ -1,0 +1,55 @@
+{
+  "itinerary": [
+    {
+      "id": "I040",
+      "date": "2026-12-30",
+      "group": "all",
+      "place_id": "P035",
+      "title": "備選：狸小路"
+    },
+    {
+      "id": "I048",
+      "date": "2026-12-22",
+      "group": "ours",
+      "place_id": "P064",
+      "title": "表參道／青山自由逛・冬季燈飾"
+    },
+    {
+      "id": "I069",
+      "date": "2026-12-22",
+      "group": "ours",
+      "place_id": "P070",
+      "title": "表參道燒肉晚餐（候選，未訂）"
+    }
+  ],
+  "places": [
+    {
+      "id": "P035",
+      "name": "狸小路"
+    },
+    {
+      "id": "P064",
+      "name": "原宿／表參道・Cat Street"
+    },
+    {
+      "id": "P070",
+      "name": "青山まんぷく"
+    },
+    {
+      "id": "P071",
+      "name": "USHIGORO 表參道"
+    },
+    {
+      "id": "P072",
+      "name": "LATTE ART MANIA TOKYO"
+    },
+    {
+      "id": "P073",
+      "name": "KINOTOYA BAKE ポールタウン店"
+    },
+    {
+      "id": "P074",
+      "name": "ツルハドラッグ 狸小路5丁目店"
+    }
+  ]
+}
