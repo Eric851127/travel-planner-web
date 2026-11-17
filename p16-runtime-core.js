@@ -52,6 +52,7 @@
 
   function clearRuntimeCaches() {
     state.cache.clear();
+    if(window.TRAVEL_PLANNER_OPTIONS)window.TRAVEL_PLANNER_OPTIONS.clear();
     if (window.TRAVEL_PLANNER_PLACE_MEMOS) window.TRAVEL_PLANNER_PLACE_MEMOS.clear();
   }
 

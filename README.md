@@ -87,3 +87,10 @@ Admin writes require a valid signed session and server-side Members authorizatio
 ```bash
 python3 -m http.server 8080
 ```
+
+## Itinerary + nearby options
+
+This change adds backward-compatible Traveler route/nearby presentation. The initial release uses one reviewed, fingerprint-checked alternative without changing Sheets or the deployed backend. See [release verification and rollback](docs/NEARBY_OPTIONS_RELEASE.md).
+See [review instructions and verification limits](docs/NEARBY_OPTIONS_REVIEW.md)
+and [optional data contract](docs/NEARBY_OPTIONS_SCHEMA.md).
+The fixture preview at `preview/` is not the canonical itinerary or a deployed site.

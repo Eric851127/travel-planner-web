@@ -1,0 +1,15 @@
+[
+  {
+    "id": "IO001",
+    "itinerary_id": "I069",
+    "candidate_place_id": "P071",
+    "relation_type": "alternative",
+    "choice_set": "12月22日燒肉晚餐",
+    "reason": "與主行程的青山まんぷく（P070）二擇一，不是第二餐。尚未訂位或查空位；不新增或改動晚餐時間。",
+    "suggested_duration_min": "",
+    "detour_note": "表參道分店；營業時間與可訂時段須出發前再確認。",
+    "priority": "normal",
+    "active": false,
+    "sort_order": 10
+  }
+]

@@ -1,4 +1,4 @@
-const CACHE_NAME = 'travel-planner-p16-3-1-20260905-1';
+const CACHE_NAME = 'travel-planner-nearby-20261117-3';
 const APP_SHELL = [
   './',
   './index.html',
@@ -13,6 +13,9 @@ const APP_SHELL = [
   './p8.js',
   './p14-place-memos-traveler.js',
   './p16-runtime-core.js',
+  './nearby-options.js',
+  './nearby-options-data.js',
+  './itinerary-ui.js',
   './admin.html',
   './admin-p11.html',
   './p14-place-memos-admin.js',

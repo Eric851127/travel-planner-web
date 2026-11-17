@@ -1,0 +1,39 @@
+[
+  {
+    "name": "LATTE ART MANIA TOKYO",
+    "parent_itinerary_ids": [
+      "I048"
+    ],
+    "candidate_place_id": null,
+    "reason": "No matching Place in the 71-row snapshot. P064 is the parent shopping area, not this café.",
+    "unlock": "Verify branch and hours; separately authorize creating a real Place; assign its real ID. Keep it inside existing free-time block, not a new timed event."
+  },
+  {
+    "name": "KINOTOYA BAKE POLE TOWN",
+    "parent_itinerary_ids": [
+      "I034"
+    ],
+    "candidate_place_id": null,
+    "reason": "No matching Place in snapshot. P900 is preview-only and must never be imported.",
+    "unlock": "Verify branch and arrival-compatible hours; separately authorize real Place and confirm inherited all-group scope."
+  },
+  {
+    "name": "鶴羽藥妝 狸小路5丁目店",
+    "parent_itinerary_ids": [
+      "I034"
+    ],
+    "candidate_place_id": null,
+    "reason": "No matching Place in snapshot. P901 is preview-only and must never be imported.",
+    "unlock": "Verify branch and hours; separately authorize real Place and confirm inherited all-group scope."
+  },
+  {
+    "name": "札幌かに家本店（表內名稱：札幌螃蟹家本店）",
+    "parent_itinerary_ids": [
+      "I034",
+      "I040"
+    ],
+    "candidate_place_id": "P047",
+    "reason": "Existing Place verified, but both parents inherit group=all. Dinner is one of 12/28 or 12/30, not both; participant scope and cross-date choice remain unresolved.",
+    "unlock": "Confirm audience scope and represent a single cross-date choice clearly before enabling either relation. No booking or fixed dinner time."
+  }
+]

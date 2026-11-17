@@ -74,13 +74,15 @@
         api('places',{},force),
         api('transport',{group:groupParam()},force),
         api('flights',{group:groupParam()},force),
-        load(force)
+        load(force),
+        window.TRAVEL_PLANNER_OPTIONS.load(force)
       ]);
       const reservationById=new Map(reservations.map(r=>[r.id,r])),placeById=new Map(places.map(p=>[p.id,p])),transportById=new Map(transports.map(t=>[t.id,t]));
+      const options=window.TRAVEL_PLANNER_OPTIONS.resolve(items,places);
       const grouped=items.reduce((a,i)=>((a[i.date]??=[]).push(i),a),{});
       const dates=new Set([...Object.keys(grouped),...flights.map(f=>f.date).filter(Boolean),...transports.map(t=>t.date).filter(Boolean)]);
       const sortedDates=Array.from(dates).sort();
-      app.innerHTML=`<section class="section">${filters()}</section><section class="stack">${sortedDates.length?sortedDates.map(d=>{const x=grouped[d]||[];return `<div class="card"><div class="row" style="margin-bottom:12px"><h2 style="margin:0">${esc(formatDateLabel(d))}</h2><span class="badge">${x.length} 個行程</span></div>${mobilityForDate(d,flights,transports,placeById)}<div class="stack">${x.length?x.map(i=>{const r=i.reservation_id?reservationById.get(i.reservation_id):null,p=i.place_id?placeById.get(i.place_id):null;return `<div class="trip-row"><div><strong>${esc(i.start_time||'—')} · ${esc(i.title)}</strong><div class="meta">${esc(i.city||'')} · ${esc(groupLabel(i.group||''))}</div>${p?`<div class="trip-place">⌖ ${esc(p.name)} ${mapLink(p,'地圖')}</div>${html(p.id)}`:''}${linkedTransportHtml(i.transport_id,transportById,placeById)}</div>${r?`<span class="badge ${esc(r.status||'')}">${esc(statusLabel(r.status))}</span>`:''}</div>`}).join(''):'<div class="empty">這一天沒有其他行程。</div>'}</div></div>`}).join(''):'<div class="card empty">目前沒有行程資料。</div>'}</section>`;
+      app.innerHTML=`<section class="section">${filters()}</section><section class="stack">${sortedDates.length?sortedDates.map(d=>{const x=grouped[d]||[];return `<details class="card trip-day"><summary><strong>${esc(formatDateLabel(d))}</strong><span class="badge">${x.length} 個主線行程</span><span class="trip-day-route meta">${esc([...new Set(x.map(i=>i.city).filter(Boolean))].join(" → "))}</span></summary><div class="trip-day-content">${mobilityForDate(d,flights,transports,placeById)}<div class="stack">${x.length?x.map(i=>{const r=i.reservation_id?reservationById.get(i.reservation_id):null,p=i.place_id?placeById.get(i.place_id):null;return `<div class="trip-row"><div><strong>${esc(i.start_time||'—')} · ${esc(i.title)}</strong> ${window.TRAVEL_PLANNER_ITINERARY_UI.status(i)}<div class="meta">${esc(i.city||'')} · ${esc(groupLabel(i.group||''))}</div>${i.description?`<div class="meta itinerary-description">${esc(i.description)}</div>`:''}${p?`<div class="trip-place">⌖ ${esc(p.name)} ${window.TRAVEL_PLANNER_ITINERARY_UI.placeLink(p,'地圖')}</div>${html(p.id)}`:''}${linkedTransportHtml(i.transport_id,transportById,placeById)}${window.TRAVEL_PLANNER_ITINERARY_UI.options(i,options)}</div>${r?`<span class="badge ${esc(r.status||'')}">${esc(statusLabel(r.status))}</span>`:''}</div>`}).join(''):'<div class="empty">這一天沒有其他行程。</div>'}</div></div></details>`}).join(''):'<div class="card empty">目前沒有行程資料。</div>'}</section>`;
       bindFilters();
     };
   }catch(error){console.error('PlaceMemo native Trip renderer failed',error)}

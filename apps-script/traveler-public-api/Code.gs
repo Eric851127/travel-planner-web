@@ -11,6 +11,7 @@ const CONFIG = {
     reservations: 'Reservations',
     places: 'Places',
     place_memos: 'PlaceMemos',
+    itinerary_options: 'ItineraryOptions',
     members: 'Members'
   }
 };
@@ -23,6 +24,7 @@ const PUBLIC_FIELDS = {
   reservations: ['id','category','name','date','time','group','status','owner_member_id','deadline','price','currency'],
   places: ['id','name','city','category','address','google_maps_url','latitude','longitude','opening_hours','website'],
   place_memos: ['id','place_id','type','title','note','priority','active','sort_order'],
+  itinerary_options: ['id','itinerary_id','candidate_place_id','relation_type','choice_set','reason','suggested_duration_min','detour_note','priority','active','sort_order'],
   members: ['id','name','group','role','active']
 };
 
@@ -79,7 +81,8 @@ function travelerBootstrap_(params) {
     hotels: publicRows('hotels',readResourceFromSpreadsheet_(ss,'hotels'),withGroup({})),
     places: publicRows('places',readResourceFromSpreadsheet_(ss,'places'),{}),
     flights: publicRows('flights',readResourceFromSpreadsheet_(ss,'flights'),withGroup(selectedDate ? {date:selectedDate} : {})),
-    place_memos: publicRows('place_memos',readResourceFromSpreadsheet_(ss,'place_memos'),{})
+    place_memos: publicRows('place_memos',readResourceFromSpreadsheet_(ss,'place_memos'),{}),
+    itinerary_options: publicRows('itinerary_options',readResourceFromSpreadsheet_(ss,'itinerary_options'),withGroup(selectedDate ? {date:selectedDate} : {}))
   };
 }
 
@@ -103,16 +106,40 @@ function readResourceFromSpreadsheet_(ss,resource) {
   const sheetName = CONFIG.RESOURCES[resource];
   if (!sheetName) throw new Error('Sheet mapping not found for resource: '+resource);
   const sheet = ss.getSheetByName(sheetName);
+  if (!sheet && resource==='itinerary_options') return [];
   if (!sheet) throw new Error('Sheet not found: '+sheetName);
   const values = sheet.getDataRange().getDisplayValues();
   if (!values.length) return [];
   const headers = values[0].map(function(header){return String(header).trim();});
-  validateHeaders_(headers,sheetName);
+  if(resource==='itinerary_options'){
+    try { validateHeaders_(headers,sheetName); } catch (_) { return []; }
+    if(PUBLIC_FIELDS.itinerary_options.some(function(field){return headers.indexOf(field)===-1;}))return [];
+  } else validateHeaders_(headers,sheetName);
   if (values.length===1) return [];
-  return values.slice(1).filter(function(row){return row.some(function(value){return String(value).trim()!=='';});}).map(function(row){
+  const rows = values.slice(1).filter(function(row){return row.some(function(value){return String(value).trim()!=='';});}).map(function(row){
     const item={};
     headers.forEach(function(header,index){item[header]=normalizeValue_(resource,header,row[index]);});
     return item;
+  });
+  return resource==='itinerary_options' ? validItineraryOptions_(rows,readResourceFromSpreadsheet_(ss,'itinerary'),readResourceFromSpreadsheet_(ss,'places')) : rows;
+}
+
+// Optional read-only relation table. No inference from private/free-text notes.
+function validItineraryOptions_(rows,items,places){
+  const parents={};items.forEach(function(item){parents[item.id]=item;});
+  const candidates={};places.forEach(function(place){candidates[place.id]=true;});
+  const seen={};
+  return rows.filter(function(row){
+    const parent=parents[row.itinerary_id];
+    const duration=row.suggested_duration_min;
+    if(row.active!==true||!/^I\d{3,}$/.test(row.itinerary_id||'')||!/^P\d{3,}$/.test(row.candidate_place_id||'')||!/^IO\d{3,}$/.test(row.id||'')||seen[row.id]||!parent||!candidates[row.candidate_place_id])return false;
+    if(['nearby','alternative'].indexOf(row.relation_type)===-1)return false;
+    row.priority=row.priority||'normal';row.sort_order=row.sort_order==null?10:row.sort_order;
+    if(['high','normal','low'].indexOf(row.priority)===-1||!Number.isInteger(row.sort_order)||row.sort_order<0||row.sort_order>9999)return false;
+    if(duration!=null&&(!Number.isInteger(duration)||duration<=0||duration>1440))return false;
+    if(String(row.reason||'').length>1000||String(row.detour_note||'').length>300||String(row.choice_set||'').length>80)return false;
+    // Inherit filter context; never trust independently supplied date/group cells.
+    row.date=parent.date;row.group=parent.group;seen[row.id]=true;return true;
   });
 }
 
@@ -125,7 +152,7 @@ function validateHeaders_(headers,sheetName){
 function normalizeValue_(resource,field,value){
   if(value===null||value===undefined||String(value).trim()==='')return null;
   const raw=String(value).trim();
-  if(field==='day'||field==='order'||field==='price'||field==='sort_order'){
+  if(field==='day'||field==='order'||field==='price'||field==='sort_order'||field==='suggested_duration_min'){
     const numberValue=Number(raw.replace(/,/g,''));
     return Number.isNaN(numberValue)?raw:numberValue;
   }
@@ -150,6 +177,7 @@ function filterRows_(rows,resource,params){
     reservations:['id','category','date','group','status','owner_member_id'],
     places:['id','city','category'],
     place_memos:['id','place_id','type','priority','active'],
+    itinerary_options:['id','itinerary_id','candidate_place_id','relation_type','priority','date','group'],
     members:['id','group','role','active']
   };
   const allowed=allowedFilters[resource]||[];
@@ -171,6 +199,7 @@ function sortRows_(rows,resource){
     if(resource==='transport')return compareValues_(a.date,b.date)||compareValues_(a.departure_time,b.departure_time)||compareValues_(a.id,b.id);
     if(resource==='reservations')return compareValues_(a.date,b.date)||compareValues_(a.time,b.time)||compareValues_(a.id,b.id);
     if(resource==='places')return compareValues_(a.city,b.city)||compareValues_(a.name,b.name)||compareValues_(a.id,b.id);
+    if(resource==='itinerary_options')return compareValues_(a.itinerary_id,b.itinerary_id)||compareValues_(a.sort_order,b.sort_order)||compareValues_(a.id,b.id);
     if(resource==='place_memos')return compareValues_(a.place_id,b.place_id)||compareValues_(a.sort_order,b.sort_order)||compareValues_(a.title,b.title)||compareValues_(a.id,b.id);
     if(resource==='members')return compareValues_(a.group,b.group)||compareValues_(a.name,b.name)||compareValues_(a.id,b.id);
     return 0;
